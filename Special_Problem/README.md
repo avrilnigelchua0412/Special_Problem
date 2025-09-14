@@ -56,3 +56,11 @@
 2. This may affect model performance — a model trained on one microscope’s images may not work as well on another.
 
 3. For my future technical paper, the microscope type and settings should be reported.
+
+### Class Imbalance:
+
+1. There are far more thyrocytes (thousands per image) compared to clusters (only 1–2 digits per image).
+
+2. This imbalance may cause the model to favor detecting thyrocytes while missing clusters.
+
+3. Augmentation needs to consider this imbalance (e.g., oversampling clusters, careful augmentation strategies).
