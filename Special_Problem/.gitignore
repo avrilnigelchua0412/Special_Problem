@@ -1,0 +1,12 @@
+# Ignore data and experiment folders
+Data/
+yolov5/
+
+# Ignore YOLO dataset splits
+yolo_dataset/train/images/
+yolo_dataset/train/labels/
+yolo_dataset/valid/images/
+yolo_dataset/valid/labels/
+
+# Ignore Python cache
+__pycache__/
