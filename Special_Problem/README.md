@@ -12,6 +12,14 @@
  - Directly linked to problem in (1): bounding boxes may capture non-informative areas.
  - Idea: test filtering rules or preprocessing masks to clean training data.
 
+3. Very Small Objects (<8×8 px)
+ - Issue: YOLOv5/7/8 detect objects at feature map strides of 8, 16, 32 (sometimes 64).
+ - At 640×640 input, the smallest grid cell corresponds to ~8×8 px.
+ - Objects smaller than this often “disappear” in downsampling and are very hard to detect.
+ - Source: Bochkovskiy et al. (2020, YOLOv4), Wang et al. (2023, YOLOv7), Ultralytics YOLOv5 docs. (**Read More**)
+ - My current approach: treat extremely small thyrocyte boxes as noise and filter them out during preprocessing, since keeping them may hurt training more than help.
+ - Future question: is removing these better than attempting to augment or oversample them?
+
 ### Modeling Approaches
 
 1. Cluster-Only Model
