@@ -20,6 +20,22 @@
  - My current approach: treat extremely small thyrocyte boxes as noise and filter them out during preprocessing, since keeping them may hurt training more than help.
  - Future question: is removing these better than attempting to augment or oversample them?
 
+4. Tiling Large Images
+ - Problem: Original images are very high-resolution (~2000×2000). 
+ - If downsampled directly to YOLO input size (e.g., 640×640), small objects like thyrocytes become invisible, and even clusters may lose detail.
+ - Tiling = splitting images into smaller patches (e.g., 512×512, 640×640) to preserve local features.
+ - This is different from YOLO’s grid (abstract, feature-map based). Tiling is a preprocessing step done manually before training.
+ - Common in medical imaging to handle gigapixel pathology slides.
+ - Hypothesis: Tiling may help highlight features (both clusters and thyrocytes) by keeping resolution higher.
+ - Future direction: Evaluate if tiling improves detection vs. direct downsampling.
+
+5. Tiling vs Non-Tiling
+ - Large images (~2000×2000) can be fed directly (downsampled) or split into smaller patches (tiled).
+ - Tiling preserves resolution of small features (e.g., thyrocytes), while direct downsampling may lose them.
+ - In pathology research, tiling is common practice for high-resolution slides.
+ - Plan: Train models on both untiled and tiled data, then compare results.
+ - Goal: Determine if tiling provides measurable benefits for this dataset, given its specific microscope source.
+
 ### Modeling Approaches
 
 1. Cluster-Only Model
