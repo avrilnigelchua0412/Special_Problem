@@ -3,12 +3,19 @@ Data/
 yolov5/
 
 # Ignore YOLO dataset splits
-yolo_dataset/images/train/
-yolo_dataset/images/val/
-yolo_dataset/images/test/
-yolo_dataset/labels/train/
-yolo_dataset/labels/val/
-yolo_dataset/labels/test/
+yolo_dataset_version_1/images/train/
+yolo_dataset_version_1/images/val/
+yolo_dataset_version_1/images/test/
+yolo_dataset_version_1/labels/train/
+yolo_dataset_version_1/labels/val/
+yolo_dataset_version_1/labels/test/
+
+yolo_dataset_version_2/images/train/
+yolo_dataset_version_2/images/val/
+yolo_dataset_version_2/images/test/
+yolo_dataset_version_2/labels/train/
+yolo_dataset_version_2/labels/val/
+yolo_dataset_version_2/labels/test/
 
 # Ignore Python cache
 __pycache__/
