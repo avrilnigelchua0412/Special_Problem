@@ -17,6 +17,7 @@ yolo_dataset_version_2/labels/train/
 yolo_dataset_version_2/labels/val/
 yolo_dataset_version_2/labels/test/
 yolo_dataset_version_2/tiles/
+yolo_dataset_version_2/augmented_tiles/
 
 # Ignore Python cache
 __pycache__/
