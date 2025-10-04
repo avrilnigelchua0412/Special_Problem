@@ -18,8 +18,7 @@ class Utils:
                     a_path, b_path  = Utils.replace(image_path)
                     if not os.path.exists(a_path) or not os.path.exists(b_path):
                         rows.append(image_path)
-        rows = pd.DataFrame(rows, columns=['Annotation Problems'])
-        rows.to_csv('annotation_problems.csv', index=False)
+        return rows
     
     @staticmethod
     def replace(original_string):
@@ -29,7 +28,6 @@ class Utils:
         a_path = re.sub(match_format.group(0), 'A.csv', replace)
         b_path = re.sub(match_format.group(0), 'B.json', replace)
         return a_path, b_path 
-
     
     @staticmethod
     def get_json_data(json_path):
@@ -135,9 +133,6 @@ class Utils:
         h_norm = bbox_height / img_height
         return x_center, y_center, w_norm, h_norm
     
-    def adjust_bboxes_for_tile(annotations, x0, y0, tile_size=StaticVariable.tile_size):
-        has_annotations = False
-    
     def csv_data_to_annotations(csv_data):
         df_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
         df_bboxes = csv_data[['bbox_x','bbox_y','bbox_width','bbox_height']].apply(lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
@@ -148,30 +143,74 @@ class Utils:
         cluster_labels = ["Cluster"] * len(cluster_bboxes)
         return cluster_labels, cluster_bboxes
         
+    def adjust_bboxes_for_tile(annotations, x0, y0,
+                               tile_size=StaticVariable.tile_size,
+                               min_pixel_size=StaticVariable.min_pixel_size):
+        tile_bboxes = []
+        tile_labels = []
+        for annotation in annotations:
+            label, bbox = annotation
+            x_min, y_min, bbox_width, bbox_height = bbox
+            x_max = x_min + bbox_width
+            y_max = y_min + bbox_height
+            
+            t_x_min, t_y_min = x0, y0
+            t_x_max, t_y_max = x0 + tile_size, y0 + tile_size
+            
+            ix1, iy1, ix2, iy2 = Utils.get_coordinates_intersections(
+                x_min, t_x_min, y_min, t_y_min, x_max, t_x_max, y_max, t_y_max
+            )
+
+            if ix1 < ix2 and iy1 < iy2:
+                new_width = ix2 - ix1
+                new_height = iy2 - iy1
+                if new_width >= min_pixel_size and new_height >= min_pixel_size:
+                    new_x = ix1 - x0
+                    new_y = iy1 - y0
+                    tile_bboxes.append((new_x, new_y, new_width, new_height))
+                    tile_labels.append(label)
+        return tile_labels, tile_bboxes
+                    # yield label, (new_x, new_y, new_width, new_height)
+    
+    def get_bboxes_and_labels(image_path, file):
+        csv_path, json_path  = Utils.replace(image_path)
+        csv_data = Utils.get_csv_data(csv_path)
+        json_data = Utils.get_json_data(json_path)
+        df_labels, df_bboxes = Utils.csv_data_to_annotations(csv_data)
+        cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
+        return df_labels, df_bboxes, cluster_labels, cluster_bboxes
+        
     @staticmethod
-    def preprocess(file_path):
+    def preprocess(file_path, invalid):
         for root, _, files in os.walk(file_path):
             for file in files:
                 format = os.path.splitext(file)[1]
                 if StaticVariable.is_supported(format):
                     image_path = os.path.join(root, file)
-                    csv_path, json_path  = Utils.replace(image_path)
-                    csv_data = Utils.get_csv_data(csv_path)
-                    json_data = Utils.get_json_data(json_path)
-                    df_labels, df_bboxes = Utils.csv_data_to_annotations(csv_data)
-                    cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
-                    
-                    # Combine both
-                    all_bboxes = df_bboxes + cluster_bboxes
-                    all_labels = df_labels + cluster_labels
-                    rgb_image, img_height, img_width = Utils.get_image_data(image_path)
-                    
-                    fig, ax = plt.subplots(1, figsize=(10, 10))
-                    ax.imshow(rgb_image)
-                    Utils.visualize_bboxes(all_bboxes, all_labels, ax)
-                    plt.title(file)
-                    plt.show()
+                    if image_path not in invalid:
+                        
+                        df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
+                        
+                        # Combine both
+                        all_bboxes = df_bboxes + cluster_bboxes
+                        all_labels = df_labels + cluster_labels
+                        rgb_image, img_height, img_width = Utils.get_image_data(image_path)
+                        
+                        annotations = list(zip(all_labels, all_bboxes))
+                        
+                        print(f'Processing {file}...')
+                        for tile, x0, y0, tile_id in Utils.image_tiling(rgb_image):
+                            tile_labels, tile_bboxes = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
+                            # for label, (new_x, new_y, new_width, new_height) in Utils.adjust_bboxes_for_tile(annotations, x0, y0):
+                            #     print(f'Tile ID: {tile_id}, Label: {label}, BBox: ({new_x}, {new_y}, {new_width}, {new_height})')
+                            fig, ax = plt.subplots(1, figsize=(5, 5))
+                            ax.imshow(tile)
+                            Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
+                            plt.title(tile_id)
+                            plt.show()
+                            break
                 break
                     
 if __name__ == '__main__':
-    Utils.preprocess(StaticVariable.data_path)
+    invalid = Utils.check_dataset(StaticVariable.data_path)
+    Utils.preprocess(StaticVariable.data_path, invalid)

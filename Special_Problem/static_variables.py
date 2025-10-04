@@ -3,6 +3,7 @@ class StaticVariable:
     formats = ['.jpeg', '.jpg', '.png']
     data_path = '/root/Special_Problem/Special_Problem/Data'
     tile_size = 512
+    min_pixel_size = 8
     transform = A.Compose(
         [
             # Geometric Transformations
