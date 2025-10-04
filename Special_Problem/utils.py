@@ -29,15 +29,7 @@ class Utils:
         a_path = re.sub(match_format.group(0), 'A.csv', replace)
         b_path = re.sub(match_format.group(0), 'B.json', replace)
         return a_path, b_path 
-    
-    @staticmethod
-    def preprocess(file_path):
-        for root, _, files in os.walk(file_path):
-            for file in files:
-                format = os.path.splitext(file)[1]
-                if StaticVariable.is_supported(format):
-                    image_path = os.path.join(root, file)
-                    a_path, b_path  = Utils.replace(image_path)
+
     
     @staticmethod
     def get_json_data(json_path):
@@ -66,42 +58,35 @@ class Utils:
             )
         with open(output_path, 'a') as f:
             f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
-    
-    def get_normalize_bounding_box(x_min, y_min, bbox_width, bbox_height, img_width, img_height):
-        x_center = (x_min + bbox_width / 2) / img_width
-        y_center = (y_min + bbox_height / 2) / img_height
-        w_norm = bbox_width / img_width
-        h_norm = bbox_height / img_height
-        return x_center, y_center, w_norm, h_norm
-    
+
     @staticmethod
     def visualize_bboxes(bboxes, labels, ax):
         """Draw bounding boxes with color-coded labels on a Matplotlib axis."""
         for box, label in zip(bboxes, labels):
             x_min, y_min, box_width, box_height = box
             # choose color based on label
-            classes = {0: "Cluster", 1: "Thyrocyte"}
-            color = "blue" if label == 0 else "red"
+            color = "red" if label == 'Cluster' or label == 'Clusters' else "blue"
+            # choose linewidth
+            linewidth = 3 if label == 'Cluster' or label == 'Clusters' else 0.2
             # draw bounding box
             ax.add_patch(plt.Rectangle(
                 (x_min, y_min),
                 box_width, box_height,
-                linewidth=0.5,
+                linewidth=linewidth,
                 edgecolor=color,
                 facecolor="none"
             ))
             # draw label text
             ax.text(
                 x_min, y_min - 5,
-                classes.get(label, str(label)),
+                label,
                 color=color,
-                fontsize=5,
+                fontsize=2,
                 weight="bold"
             )
-        plt.show()
     
     @staticmethod
-    def image_tiling(original_image, tile_size=512, overlap=.25):
+    def image_tiling(original_image, tile_size=StaticVariable.tile_size, overlap=.25):
         """
         Generate tiles from the original image with specified overlap.
         Yields tuples of (tile, x0, y0, tile_id) where (x0, y0) is the top-left
@@ -116,6 +101,77 @@ class Utils:
                 y1 = min(y0 + tile_size, img_height)
                 tile = original_image[y0:y1, x0:x1]
                 yield tile, x0, y0, tile_id
-                
+    
+    def polygon_to_bounding_box(json_data, file):
+        bounding_box_list = []
+        for item in json_data[file].values():
+            if isinstance(item, dict):
+                if item != {}:
+                    length = len(item.values())
+                    for i in range(length):
+                        poly_x = item[str(i)]['shape_attributes']['all_points_x']
+                        poly_y = item[str(i)]['shape_attributes']['all_points_y']
+                        # Compute bounding box
+                        x_min, x_max = min(poly_x), max(poly_x)
+                        y_min, y_max = min(poly_y), max(poly_y)
+                        bbox_width = x_max - x_min
+                        bbox_height = y_max - y_min
+                        # Match format: [x, y, width, height]
+                        bounding_box_list.append([int(x_min), int(y_min), int(bbox_width), int(bbox_height)])
+        return bounding_box_list
+    
+    def get_coordinates_intersections(x_min, t_x_min, y_min, t_y_min, x_max, t_x_max, y_max, t_y_max):
+        return (
+            max(x_min, t_x_min),   # overlap left
+            max(y_min, t_y_min),   # overlap top
+            min(x_max, t_x_max),   # overlap right
+            min(y_max, t_y_max)    # overlap bottom
+        )
+            
+    def get_normalize_bounding_box(x_min, y_min, bbox_width, bbox_height, img_width, img_height):
+        x_center = (x_min + bbox_width / 2) / img_width
+        y_center = (y_min + bbox_height / 2) / img_height
+        w_norm = bbox_width / img_width
+        h_norm = bbox_height / img_height
+        return x_center, y_center, w_norm, h_norm
+    
+    def adjust_bboxes_for_tile(annotations, x0, y0, tile_size=StaticVariable.tile_size):
+        has_annotations = False
+    
+    def csv_data_to_annotations(csv_data):
+        df_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
+        df_bboxes = csv_data[['bbox_x','bbox_y','bbox_width','bbox_height']].apply(lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
+        return df_labels, df_bboxes
+    
+    def json_data_to_annotations(json_data, file):
+        cluster_bboxes = Utils.polygon_to_bounding_box(json_data, file)
+        cluster_labels = ["Cluster"] * len(cluster_bboxes)
+        return cluster_labels, cluster_bboxes
+        
+    @staticmethod
+    def preprocess(file_path):
+        for root, _, files in os.walk(file_path):
+            for file in files:
+                format = os.path.splitext(file)[1]
+                if StaticVariable.is_supported(format):
+                    image_path = os.path.join(root, file)
+                    csv_path, json_path  = Utils.replace(image_path)
+                    csv_data = Utils.get_csv_data(csv_path)
+                    json_data = Utils.get_json_data(json_path)
+                    df_labels, df_bboxes = Utils.csv_data_to_annotations(csv_data)
+                    cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
+                    
+                    # Combine both
+                    all_bboxes = df_bboxes + cluster_bboxes
+                    all_labels = df_labels + cluster_labels
+                    rgb_image, img_height, img_width = Utils.get_image_data(image_path)
+                    
+                    fig, ax = plt.subplots(1, figsize=(10, 10))
+                    ax.imshow(rgb_image)
+                    Utils.visualize_bboxes(all_bboxes, all_labels, ax)
+                    plt.title(file)
+                    plt.show()
+                break
+                    
 if __name__ == '__main__':
     Utils.preprocess(StaticVariable.data_path)

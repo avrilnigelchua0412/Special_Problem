@@ -2,7 +2,7 @@ import albumentations as A
 class StaticVariable:
     formats = ['.jpeg', '.jpg', '.png']
     data_path = '/root/Special_Problem/Special_Problem/Data'
-    
+    tile_size = 512
     transform = A.Compose(
         [
             # Geometric Transformations
