@@ -5,6 +5,7 @@ import pandas as pd
 import json
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 class Utils:
     @staticmethod
@@ -146,6 +147,7 @@ class Utils:
     def adjust_bboxes_for_tile(annotations, x0, y0,
                                tile_size=StaticVariable.tile_size,
                                min_pixel_size=StaticVariable.min_pixel_size):
+        has_annotation = False
         tile_bboxes = []
         tile_labels = []
         for annotation in annotations:
@@ -169,8 +171,21 @@ class Utils:
                     new_y = iy1 - y0
                     tile_bboxes.append((new_x, new_y, new_width, new_height))
                     tile_labels.append(label)
-        return tile_labels, tile_bboxes
+                    has_annotation = True
+        return tile_labels, tile_bboxes, has_annotation
                     # yield label, (new_x, new_y, new_width, new_height)
+    
+    def process_and_save_tile(rgb_image, annotations):
+        for tile, x0, y0, tile_id in Utils.image_tiling(rgb_image):
+            tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
+            # for label, (new_x, new_y, new_width, new_height) in Utils.adjust_bboxes_for_tile(annotations, x0, y0):
+            #     print(f'Tile ID: {tile_id}, Label: {label}, BBox: ({new_x}, {new_y}, {new_width}, {new_height})')
+            if has_annotation:
+                fig, ax = plt.subplots(1, figsize=(5, 5))
+                ax.imshow(tile)
+                Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
+                plt.title(tile_id)
+                plt.show()
     
     def get_bboxes_and_labels(image_path, file):
         csv_path, json_path  = Utils.replace(image_path)
@@ -188,27 +203,21 @@ class Utils:
                 if StaticVariable.is_supported(format):
                     image_path = os.path.join(root, file)
                     if image_path not in invalid:
-                        
                         df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
                         
-                        # Combine both
+                        # Original Image and Annotations
                         all_bboxes = df_bboxes + cluster_bboxes
                         all_labels = df_labels + cluster_labels
                         rgb_image, img_height, img_width = Utils.get_image_data(image_path)
                         
-                        annotations = list(zip(all_labels, all_bboxes))
+                        # Augmentated Image and Annotations
+                        augmented = StaticVariable.transform(image=rgb_image, bboxes=all_bboxes, labels=all_labels)
+                        augmented_image = augmented['image']
+                        augmented_bboxes = augmented['bboxes']
+                        augmented_labels = augmented['labels']
                         
-                        print(f'Processing {file}...')
-                        for tile, x0, y0, tile_id in Utils.image_tiling(rgb_image):
-                            tile_labels, tile_bboxes = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
-                            # for label, (new_x, new_y, new_width, new_height) in Utils.adjust_bboxes_for_tile(annotations, x0, y0):
-                            #     print(f'Tile ID: {tile_id}, Label: {label}, BBox: ({new_x}, {new_y}, {new_width}, {new_height})')
-                            fig, ax = plt.subplots(1, figsize=(5, 5))
-                            ax.imshow(tile)
-                            Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
-                            plt.title(tile_id)
-                            plt.show()
-                            break
+                        original_annotations = list(zip(all_labels, all_bboxes))
+                        augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
                 break
                     
 if __name__ == '__main__':
