@@ -11,14 +11,10 @@ class Utils:
     @staticmethod
     def check_dataset(file_path):
         rows = []
-        for root, _, files in os.walk(file_path):
-            for file in files:
-                format = os.path.splitext(file)[1]
-                if StaticVariable.is_supported(format):
-                    image_path = os.path.join(root, file)
-                    a_path, b_path  = Utils.replace(image_path)
-                    if not os.path.exists(a_path) or not os.path.exists(b_path):
-                        rows.append(image_path)
+        for image_path, _ in Utils.helper_os_walk(file_path):
+            a_path, b_path  = Utils.replace(image_path)
+            if not os.path.exists(a_path) or not os.path.exists(b_path):
+                rows.append(image_path)
         return rows
     
     @staticmethod
@@ -66,7 +62,7 @@ class Utils:
             # choose color based on label
             color = "red" if label == 'Cluster' or label == 'Clusters' else "blue"
             # choose linewidth
-            linewidth = 3 if label == 'Cluster' or label == 'Clusters' else 0.2
+            linewidth = 3 if label == 'Cluster' or label == 'Clusters' else 0.05
             # draw bounding box
             ax.add_patch(plt.Rectangle(
                 (x_min, y_min),
@@ -136,7 +132,9 @@ class Utils:
     
     def csv_data_to_annotations(csv_data):
         df_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
-        df_bboxes = csv_data[['bbox_x','bbox_y','bbox_width','bbox_height']].apply(lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
+        df_bboxes = csv_data[
+            ['bbox_x','bbox_y','bbox_width','bbox_height']].apply(
+                lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
         return df_labels, df_bboxes
     
     def json_data_to_annotations(json_data, file):
@@ -178,8 +176,6 @@ class Utils:
     def process_and_save_tile(rgb_image, annotations):
         for tile, x0, y0, tile_id in Utils.image_tiling(rgb_image):
             tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
-            # for label, (new_x, new_y, new_width, new_height) in Utils.adjust_bboxes_for_tile(annotations, x0, y0):
-            #     print(f'Tile ID: {tile_id}, Label: {label}, BBox: ({new_x}, {new_y}, {new_width}, {new_height})')
             if has_annotation:
                 fig, ax = plt.subplots(1, figsize=(5, 5))
                 ax.imshow(tile)
@@ -195,31 +191,56 @@ class Utils:
         cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
         return df_labels, df_bboxes, cluster_labels, cluster_bboxes
         
+    def save_image_with_annotations():
+        pass
+    
     @staticmethod
     def preprocess(file_path, invalid):
+        for image_path, file in Utils.helper_os_walk(file_path):
+            if image_path not in invalid:
+                df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
+                
+                # Original Image and Annotations
+                original_bboxes = df_bboxes + cluster_bboxes
+                original_labels = df_labels + cluster_labels
+                rgb_image, img_height, img_width = Utils.get_image_data(image_path)
+                
+                # Augmentated Image and Annotations
+                augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
+                augmented_image = augmented['image']
+                augmented_bboxes = augmented['bboxes']
+                augmented_labels = augmented['labels']
+                
+                original_annotations = list(zip(original_labels, original_bboxes))
+                augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
+            break
+    
+    @staticmethod
+    def handle_data_split(file_path, invalid):
+        for image_path, file in Utils.helper_os_walk(file_path):
+            if image_path not in invalid:
+                try:
+                    print(f"Processing {file} .....")
+                    csv_path, json_path  = Utils.replace(image_path)
+                    csv_data = Utils.get_csv_data(csv_path)
+                    json_data = Utils.get_json_data(json_path)
+                    thyrocytes = csv_data['label_name'].count()
+                    clusters = 0
+                    for item in json_data[file].values():
+                        if isinstance(item, dict) and item:
+                            clusters += len(item.values())
+                    print(thyrocytes, clusters)
+                except KeyError as e:
+                    print(f"{e} in {file}")
+                            
+    def helper_os_walk(file_path):
         for root, _, files in os.walk(file_path):
             for file in files:
                 format = os.path.splitext(file)[1]
                 if StaticVariable.is_supported(format):
                     image_path = os.path.join(root, file)
-                    if image_path not in invalid:
-                        df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
-                        
-                        # Original Image and Annotations
-                        all_bboxes = df_bboxes + cluster_bboxes
-                        all_labels = df_labels + cluster_labels
-                        rgb_image, img_height, img_width = Utils.get_image_data(image_path)
-                        
-                        # Augmentated Image and Annotations
-                        augmented = StaticVariable.transform(image=rgb_image, bboxes=all_bboxes, labels=all_labels)
-                        augmented_image = augmented['image']
-                        augmented_bboxes = augmented['bboxes']
-                        augmented_labels = augmented['labels']
-                        
-                        original_annotations = list(zip(all_labels, all_bboxes))
-                        augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
-                break
-                    
+                    yield image_path, file
+                
 if __name__ == '__main__':
     invalid = Utils.check_dataset(StaticVariable.data_path)
-    Utils.preprocess(StaticVariable.data_path, invalid)
+    Utils.handle_data_split(StaticVariable.data_path, invalid)

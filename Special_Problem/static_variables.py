@@ -26,7 +26,8 @@ class StaticVariable:
             A.GridDropout(ratio=0.05, p=0.5)
             # ToTensorV2()
         ],
-        bbox_params=A.BboxParams(format='coco', label_fields=['labels'])
+        seed=42,
+        bbox_params=A.BboxParams(format='coco', label_fields=['labels'],)
     )
     
     @classmethod
@@ -36,3 +37,12 @@ class StaticVariable:
     @classmethod
     def get_transform(cls):
         return cls.transform
+    
+    @staticmethod
+    def cluster_group(x):
+        if x <= 4:
+            return "low"
+        elif x <= 10:
+            return "medium"
+        else:
+            return "high"
