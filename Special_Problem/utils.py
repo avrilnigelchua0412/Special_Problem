@@ -6,6 +6,7 @@ import json
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 class Utils:
     @staticmethod
@@ -216,20 +217,16 @@ class Utils:
             break
     
     @staticmethod
-    def handle_data_split(file_path, invalid):
+    def handle_data_count_summary_to_csv(file_path, invalid):
         for image_path, file in Utils.helper_os_walk(file_path):
             if image_path not in invalid:
                 try:
-                    print(f"Processing {file} .....")
                     csv_path, json_path  = Utils.replace(image_path)
                     csv_data = Utils.get_csv_data(csv_path)
                     json_data = Utils.get_json_data(json_path)
                     thyrocytes = csv_data['label_name'].count()
-                    clusters = 0
-                    for item in json_data[file].values():
-                        if isinstance(item, dict) and item:
-                            clusters += len(item.values())
-                    print(thyrocytes, clusters)
+                    clusters = sum(len(item) for item in json_data[file].values() if isinstance(item, dict) and item)
+                    yield file, thyrocytes, clusters
                 except KeyError as e:
                     print(f"{e} in {file}")
                             
@@ -242,5 +239,30 @@ class Utils:
                     yield image_path, file
                 
 if __name__ == '__main__':
-    invalid = Utils.check_dataset(StaticVariable.data_path)
-    Utils.handle_data_split(StaticVariable.data_path, invalid)
+    # invalid = Utils.check_dataset(StaticVariable.data_path)
+    # rows = []
+    # for file, thyrocytes, clusters in Utils.handle_data_count_summary_to_csv(StaticVariable.data_path, invalid):
+    #     rows.append({
+    #                 'File': file,
+    #                 'Thyrocytes_Count': thyrocytes,
+    #                 'Clusters_Count': clusters
+    #             })
+    # summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
+    # summary_df.to_csv('/root/Special_Problem/Special_Problem/dataset_summary.csv', index=False)
+    # print("/root/Special_Problem/Special_Problem/dataset_summary.csv")
+    summary = pd.read_csv("/root/Special_Problem/Special_Problem/dataset_summary.csv")
+    summary["Cluster_Group"] = summary["Clusters_Count"].apply(StaticVariable.cluster_group)
+    # Stratified split (80% train, 10% val, 10% test)
+    train_df, temp_df = train_test_split(
+        summary, test_size=0.2, stratify=summary["Cluster_Group"], random_state=42
+    )
+    val_df, test_df = train_test_split(
+        temp_df, test_size=0.5, stratify=temp_df["Cluster_Group"], random_state=42
+    )
+    print("Train: ",train_df['Cluster_Group'].value_counts())
+    print("Validation: ", val_df['Cluster_Group'].value_counts())
+    print("Test: ", test_df['Cluster_Group'].value_counts())
+    
+    train_df.to_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv', index=False)
+    val_df.to_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv', index=False)
+    test_df.to_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv', index=False)
