@@ -10,9 +10,9 @@ from sklearn.model_selection import train_test_split
 
 class Utils:
     @staticmethod
-    def check_dataset(file_path):
+    def check_dataset():
         rows = []
-        for image_path, _ in Utils.helper_os_walk(file_path):
+        for image_path, _ in Utils.helper_os_walk():
             a_path, b_path  = Utils.replace(image_path)
             if not os.path.exists(a_path) or not os.path.exists(b_path):
                 rows.append(image_path)
@@ -191,34 +191,10 @@ class Utils:
         df_labels, df_bboxes = Utils.csv_data_to_annotations(csv_data)
         cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
         return df_labels, df_bboxes, cluster_labels, cluster_bboxes
-        
-    def save_image_with_annotations():
-        pass
-    
+   
     @staticmethod
-    def preprocess(file_path, invalid):
-        for image_path, file in Utils.helper_os_walk(file_path):
-            if image_path not in invalid:
-                df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
-                
-                # Original Image and Annotations
-                original_bboxes = df_bboxes + cluster_bboxes
-                original_labels = df_labels + cluster_labels
-                rgb_image, img_height, img_width = Utils.get_image_data(image_path)
-                
-                # Augmentated Image and Annotations
-                augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
-                augmented_image = augmented['image']
-                augmented_bboxes = augmented['bboxes']
-                augmented_labels = augmented['labels']
-                
-                original_annotations = list(zip(original_labels, original_bboxes))
-                augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
-            break
-    
-    @staticmethod
-    def handle_data_count_summary_to_csv(file_path, invalid):
-        for image_path, file in Utils.helper_os_walk(file_path):
+    def handle_data_count_summary(invalid):
+        for image_path, file in Utils.helper_os_walk():
             if image_path not in invalid:
                 try:
                     csv_path, json_path  = Utils.replace(image_path)
@@ -229,40 +205,65 @@ class Utils:
                     yield file, thyrocytes, clusters
                 except KeyError as e:
                     print(f"{e} in {file}")
-                            
-    def helper_os_walk(file_path):
+                    
+    @staticmethod
+    def data_split_csv(invalid):
+        rows = [
+            {'File': file, 'Thyrocytes_Count': thyrocytes, 'Clusters_Count': clusters}
+            for file, thyrocytes, clusters in Utils.handle_data_count_summary(StaticVariable.data_path, invalid)
+        ]
+        summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
+        summary_df.to_csv('/root/Special_Problem/Special_Problem/dataset_summary.csv', index=False)
+        
+        summary = pd.read_csv("/root/Special_Problem/Special_Problem/dataset_summary.csv")
+        summary["Cluster_Group"] = summary["Clusters_Count"].apply(StaticVariable.cluster_group)
+        
+        # Stratified split (80% train, 10% val, 10% test)
+        train_df, temp_df = train_test_split(
+            summary, test_size=0.2, stratify=summary["Cluster_Group"], random_state=42
+        )
+        
+        val_df, test_df = train_test_split(
+            temp_df, test_size=0.5, stratify=temp_df["Cluster_Group"], random_state=42
+        )
+        
+        train_df.to_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv', index=False)
+        val_df.to_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv', index=False)
+        test_df.to_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv', index=False)      
+          
+    def helper_os_walk(file_path=StaticVariable.data_path):
         for root, _, files in os.walk(file_path):
             for file in files:
                 format = os.path.splitext(file)[1]
                 if StaticVariable.is_supported(format):
                     image_path = os.path.join(root, file)
                     yield image_path, file
-                
-if __name__ == '__main__':
-    # invalid = Utils.check_dataset(StaticVariable.data_path)
-    # rows = []
-    # for file, thyrocytes, clusters in Utils.handle_data_count_summary_to_csv(StaticVariable.data_path, invalid):
-    #     rows.append({
-    #                 'File': file,
-    #                 'Thyrocytes_Count': thyrocytes,
-    #                 'Clusters_Count': clusters
-    #             })
-    # summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
-    # summary_df.to_csv('/root/Special_Problem/Special_Problem/dataset_summary.csv', index=False)
-    # print("/root/Special_Problem/Special_Problem/dataset_summary.csv")
-    summary = pd.read_csv("/root/Special_Problem/Special_Problem/dataset_summary.csv")
-    summary["Cluster_Group"] = summary["Clusters_Count"].apply(StaticVariable.cluster_group)
-    # Stratified split (80% train, 10% val, 10% test)
-    train_df, temp_df = train_test_split(
-        summary, test_size=0.2, stratify=summary["Cluster_Group"], random_state=42
-    )
-    val_df, test_df = train_test_split(
-        temp_df, test_size=0.5, stratify=temp_df["Cluster_Group"], random_state=42
-    )
-    print("Train: ",train_df['Cluster_Group'].value_counts())
-    print("Validation: ", val_df['Cluster_Group'].value_counts())
-    print("Test: ", test_df['Cluster_Group'].value_counts())
+        
+    def save_image_with_annotations():
+        pass
     
-    train_df.to_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv', index=False)
-    val_df.to_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv', index=False)
-    test_df.to_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv', index=False)
+    @staticmethod
+    def preprocess(invalid):
+        for image_path, file in Utils.helper_os_walk():
+            if image_path not in invalid:
+                df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
+                
+                # Original Image and Annotations
+                rgb_image, img_height, img_width = Utils.get_image_data(image_path)
+                original_bboxes = df_bboxes + cluster_bboxes
+                original_labels = df_labels + cluster_labels
+                original_annotations = list(zip(original_labels, original_bboxes))
+                
+                # Augmentated Image and Annotations
+                if file in StaticVariable.train_list:
+                    augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
+                    augmented_image = augmented['image']
+                    augmented_bboxes = augmented['bboxes']
+                    augmented_labels = augmented['labels']
+                    augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
+                
+            break
+        
+if __name__ == '__main__':
+    invalid = Utils.check_dataset()
+    Utils.data_split_csv(invalid)
