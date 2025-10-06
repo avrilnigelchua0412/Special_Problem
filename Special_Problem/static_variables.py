@@ -7,9 +7,9 @@ class StaticVariable:
     tile_size = 512
     min_pixel_size = 8
     
-    train_list = (pd.read_csv('/home/Special_Problem/train_df_summary.csv'))['File'].to_list()
-    val_list = (pd.read_csv('/home/Special_Problem/val_df_summary.csv'))['File'].to_list()
-    test_list = (pd.read_csv('/home/Special_Problem/test_df_summary.csv'))['File'].to_list()    
+    train_list = (pd.read_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv'))['File'].to_list()
+    val_list = (pd.read_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv'))['File'].to_list()
+    test_list = (pd.read_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv'))['File'].to_list()    
     
     transform = A.Compose(
         [

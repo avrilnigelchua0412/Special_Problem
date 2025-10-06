@@ -243,27 +243,49 @@ class Utils:
         pass
     
     @staticmethod
-    def preprocess(invalid):
+    def preprocess_original_image_annotations_generator(invalid, preprocess_callback=None, file_callback=None):
         for image_path, file in Utils.helper_os_walk():
             if image_path not in invalid:
                 df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
                 
-                # Original Image and Annotations
-                rgb_image, img_height, img_width = Utils.get_image_data(image_path)
+                rgb_image, _, _ = Utils.get_image_data(image_path)
                 original_bboxes = df_bboxes + cluster_bboxes
                 original_labels = df_labels + cluster_labels
-                original_annotations = list(zip(original_labels, original_bboxes))
                 
-                # Augmentated Image and Annotations
-                if file in StaticVariable.train_list:
-                    augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
-                    augmented_image = augmented['image']
-                    augmented_bboxes = augmented['bboxes']
-                    augmented_labels = augmented['labels']
-                    augmented_annotations = list(zip(augmented_labels, augmented_bboxes))
-                
-            break
-        
+                if file_callback is not None:
+                    file_callback(file)
+                if preprocess_callback is not None and file in StaticVariable.train_list:
+                    augmented_image, augmented_bboxes, augmented_labels = preprocess_callback(
+                        rgb_image, original_bboxes, original_labels
+                        )
+                    yield "Augmented", augmented_image, augmented_bboxes, augmented_labels
+                yield "Original", rgb_image, original_bboxes, original_labels
+    
+    @staticmethod
+    def preprocess_augmented_image_annotations_helper(rgb_image, original_bboxes, original_labels):
+        augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
+        return augmented['image'], augmented['bboxes'], augmented['labels']
+
+class CallbackUtil:
+    def __init__(self):
+        self.file = None
+    
+    def set_file(self, file):
+        self.file = file
+    
+    def get_file(self):
+        return self.file
+
 if __name__ == '__main__':
+    callback = CallbackUtil()
     invalid = Utils.check_dataset()
-    Utils.data_split_csv(invalid)
+    for data_type, image, bboxes, labels in Utils.preprocess_original_image_annotations_generator(
+        invalid, 
+        Utils.preprocess_augmented_image_annotations_helper,
+        callback.set_file
+        ):
+        print(f"File: {callback.get_file()} ...")
+        if data_type == "Original":
+            print("Processing original image ...")
+        elif data_type == "Augmented":
+            print("Processing augmented image ...")
