@@ -11,6 +11,24 @@ class StaticVariable:
     val_list = (pd.read_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv'))['File'].to_list()
     test_list = (pd.read_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv'))['File'].to_list()    
     
+    tile_train_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/"
+    tile_train_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/"
+    
+    actual_train_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/"
+    actual_train_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/"
+   
+    tile_valid_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/valid/"
+    tile_valid_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    
+    actual_valid_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/valid/"
+    actual_valid_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/valid/"
+    
+    tile_test_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/valid/"
+    tile_test_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    
+    actual_test_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/"
+    actual_test_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/"
+    
     transform = A.Compose(
         [
             # Geometric Transformations
@@ -22,7 +40,7 @@ class StaticVariable:
             # Photometric Transformations
             A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
             A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.5),
-            A.GaussNoise(std_range=(0.01, 0.05), p=1.0), # 1% to 5% noise
+            A.GaussNoise(std_range=(0.03, 0.05), p=1.0), # 1% to 5% noise
             # Occlusion/regularization
             A.CoarseDropout(
             num_holes_range=(5, 5),

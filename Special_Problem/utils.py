@@ -42,18 +42,7 @@ class Utils:
     def get_image_data(image_path):
         bgr_image = cv2.imread(image_path)
         rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
-        img_height, img_width, _ =  rgb_image.shape
-        return rgb_image, img_height, img_width
-    
-    @staticmethod
-    def write_normalize_bounding_box(
-        x_min, y_min, bbox_width, bbox_height, img_width, img_height,
-        output_path, class_id):
-        x_center, y_center, w_norm, h_norm = Utils.get_normalize_bounding_box(
-            x_min, y_min, bbox_width, bbox_height, img_width, img_height
-            )
-        with open(output_path, 'a') as f:
-            f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
+        return rgb_image
 
     @staticmethod
     def visualize_bboxes(bboxes, labels, ax):
@@ -173,17 +162,7 @@ class Utils:
                     has_annotation = True
         return tile_labels, tile_bboxes, has_annotation
                     # yield label, (new_x, new_y, new_width, new_height)
-    
-    def process_and_save_tile(rgb_image, annotations):
-        for tile, x0, y0, tile_id in Utils.image_tiling(rgb_image):
-            tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
-            if has_annotation:
-                fig, ax = plt.subplots(1, figsize=(5, 5))
-                ax.imshow(tile)
-                Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
-                plt.title(tile_id)
-                plt.show()
-    
+
     def get_bboxes_and_labels(image_path, file):
         csv_path, json_path  = Utils.replace(image_path)
         csv_data = Utils.get_csv_data(csv_path)
@@ -238,17 +217,14 @@ class Utils:
                 if StaticVariable.is_supported(format):
                     image_path = os.path.join(root, file)
                     yield image_path, file
-        
-    def save_image_with_annotations():
-        pass
-    
+
     @staticmethod
     def preprocess_original_image_annotations_generator(invalid, preprocess_callback=None, file_callback=None):
         for image_path, file in Utils.helper_os_walk():
             if image_path not in invalid:
                 df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
                 
-                rgb_image, _, _ = Utils.get_image_data(image_path)
+                rgb_image = Utils.get_image_data(image_path)
                 original_bboxes = df_bboxes + cluster_bboxes
                 original_labels = df_labels + cluster_labels
                 
@@ -265,7 +241,51 @@ class Utils:
     def preprocess_augmented_image_annotations_helper(rgb_image, original_bboxes, original_labels):
         augmented = StaticVariable.transform(image=rgb_image, bboxes=original_bboxes, labels=original_labels)
         return augmented['image'], augmented['bboxes'], augmented['labels']
-
+ 
+    def get_corresponding_actual_path(file):
+        if file in StaticVariable.train_list:
+            return StaticVariable.actual_train_image_path, StaticVariable.actual_train_label_path
+        elif file in StaticVariable.val_list:
+            return StaticVariable.actual_valid_image_path, StaticVariable.actual_valid_label_path
+        elif file in StaticVariable.test_list:
+            return StaticVariable.actual_test_image_path, StaticVariable.actual_test_label_path
+    
+    def get_corresponding_tile_path(file):
+        if file in StaticVariable.train_list:
+            return StaticVariable.tile_train_image_path, StaticVariable.tile_train_label_path
+        elif file in StaticVariable.val_list:
+            return StaticVariable.tile_valid_image_path, StaticVariable.tile_valid_label_path
+        elif file in StaticVariable.test_list:
+            return StaticVariable.tile_test_image_path, StaticVariable.tile_test_label_path
+            
+    def write_annotations(image, bboxes, labels):
+        img_height, img_width, _ = image.shape
+        # TODO:
+    
+    def normalize_bounding_box(
+        x_min, y_min, bbox_width, bbox_height, img_width, img_height,
+        output_path, class_id
+        ):
+        x_center, y_center, w_norm, h_norm = Utils.get_normalize_bounding_box(
+            x_min, y_min, bbox_width, bbox_height, img_width, img_height
+            )
+        with open(output_path, 'a') as f:
+            f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
+   
+    @staticmethod
+    def process_and_save_tile(image, annotations):
+        """
+        label, bbox = annotation
+        """
+        for tile, x0, y0, tile_id in Utils.image_tiling(image):
+            tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
+            if has_annotation:
+                fig, ax = plt.subplots(1, figsize=(5, 5))
+                ax.imshow(tile)
+                Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
+                plt.title(tile_id)
+                plt.show()
+    
 class CallbackUtil:
     def __init__(self):
         self.file = None
@@ -280,12 +300,39 @@ if __name__ == '__main__':
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
     for data_type, image, bboxes, labels in Utils.preprocess_original_image_annotations_generator(
-        invalid, 
-        Utils.preprocess_augmented_image_annotations_helper,
-        callback.set_file
+            invalid, 
+            Utils.preprocess_augmented_image_annotations_helper,
+            callback.set_file
         ):
+        image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
+        file = callback.get_file()
         print(f"File: {callback.get_file()} ...")
         if data_type == "Original":
             print("Processing original image ...")
+            cv2.imwrite(os.path.join(image_path, f"original_{file}"), image)
+            Utils.write_annotations(image, bboxes, labels)
+            # Utils.process_and_save_tile(image, zip(labels, bboxes))
         elif data_type == "Augmented":
             print("Processing augmented image ...")
+            cv2.imwrite(os.path.join(image_path, f"augmented_{file}"), image)
+            Utils.write_annotations(image, bboxes, labels)
+            # Utils.process_and_save_tile(image, zip(labels, bboxes))
+        break
+    
+    # paths = ["/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/val/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/val/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/val/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/test/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/val/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/test/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/tiles/",
+    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
+    
+    # for path in paths:
+    #     os.makedirs(path, exist_ok=True)
