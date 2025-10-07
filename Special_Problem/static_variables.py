@@ -7,6 +7,8 @@ class StaticVariable:
     tile_size = 512
     min_pixel_size = 8
     
+    label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1}
+    
     train_list = (pd.read_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv'))['File'].to_list()
     val_list = (pd.read_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv'))['File'].to_list()
     test_list = (pd.read_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv'))['File'].to_list()    
@@ -28,6 +30,21 @@ class StaticVariable:
     
     actual_test_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/"
     actual_test_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/"
+    
+    directories = ["/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/val/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/val/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/val/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/test/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/val/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/test/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/tiles/",
+    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
     
     transform = A.Compose(
         [

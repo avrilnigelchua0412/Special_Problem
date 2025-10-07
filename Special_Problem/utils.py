@@ -258,17 +258,27 @@ class Utils:
         elif file in StaticVariable.test_list:
             return StaticVariable.tile_test_image_path, StaticVariable.tile_test_label_path
             
-    def write_annotations(image, bboxes, labels):
+    def write_annotations(image, bboxes, labels, output_path):
         img_height, img_width, _ = image.shape
-        # TODO:
-    
+        
+        # Clear file before writing (avoid leftover content)
+        open(output_path, 'w').close()
+        
+        for bbox, label in zip(bboxes, labels):
+            x_min, y_min, bbox_width, bbox_height = bbox
+            class_id = StaticVariable.label_map[label]
+            Utils.normalize_bounding_box(
+                x_min, y_min, bbox_width, bbox_height, img_height, img_width,
+                output_path, class_id
+            )
+            
     def normalize_bounding_box(
-        x_min, y_min, bbox_width, bbox_height, img_width, img_height,
-        output_path, class_id
-        ):
+        x_min, y_min, bbox_width, bbox_height, 
+        img_height, img_width, output_path, class_id
+    ):
         x_center, y_center, w_norm, h_norm = Utils.get_normalize_bounding_box(
             x_min, y_min, bbox_width, bbox_height, img_width, img_height
-            )
+        )
         with open(output_path, 'a') as f:
             f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
    
@@ -297,42 +307,23 @@ class CallbackUtil:
         return self.file
 
 if __name__ == '__main__':
+    for dir in StaticVariable.directories:
+        os.makedirs(dir, exist_ok=True)
+        
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
     for data_type, image, bboxes, labels in Utils.preprocess_original_image_annotations_generator(
-            invalid, 
-            Utils.preprocess_augmented_image_annotations_helper,
-            callback.set_file
-        ):
+        invalid, 
+        Utils.preprocess_augmented_image_annotations_helper,
+        callback.set_file
+    ):
         image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
         file = callback.get_file()
-        print(f"File: {callback.get_file()} ...")
-        if data_type == "Original":
-            print("Processing original image ...")
-            cv2.imwrite(os.path.join(image_path, f"original_{file}"), image)
-            Utils.write_annotations(image, bboxes, labels)
-            # Utils.process_and_save_tile(image, zip(labels, bboxes))
-        elif data_type == "Augmented":
-            print("Processing augmented image ...")
-            cv2.imwrite(os.path.join(image_path, f"augmented_{file}"), image)
-            Utils.write_annotations(image, bboxes, labels)
-            # Utils.process_and_save_tile(image, zip(labels, bboxes))
+        prefix = "augmented" if data_type == "Augmented" else "original"
+        print(f"Processing {prefix} image: {file} ...")
+        # Save image
+        cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
+        # Save labels
+        label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
+        Utils.write_annotations(image, bboxes, labels, label_file)
         break
-    
-    # paths = ["/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/val/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/val/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/val/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/test/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/val/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/test/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/tiles/",
-    # "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
-    
-    # for path in paths:
-    #     os.makedirs(path, exist_ok=True)
