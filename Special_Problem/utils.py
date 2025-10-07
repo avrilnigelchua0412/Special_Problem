@@ -188,7 +188,7 @@ class Utils:
     def data_split_csv(invalid):
         rows = [
             {'File': file, 'Thyrocytes_Count': thyrocytes, 'Clusters_Count': clusters}
-            for file, thyrocytes, clusters in Utils.handle_data_count_summary(StaticVariable.data_path, invalid)
+            for file, thyrocytes, clusters in Utils.handle_data_count_summary(invalid)
         ]
         summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
         summary_df.to_csv('/home/Special_Problem/dataset_summary.csv', index=False)
@@ -336,6 +336,7 @@ if __name__ == '__main__':
         
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
+    Utils.data_split_csv(invalid)
     for data_type, data in Utils.preprocess_original_image_annotations_generator(
         invalid, 
         Utils.preprocess_augmented_image_annotations_helper,
@@ -354,3 +355,4 @@ if __name__ == '__main__':
         for tile_data, tile_id in Utils.process_tile_generator(data):
             file_tile = file.replace(".", f"_{tile_id}.") 
             Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
+        break
