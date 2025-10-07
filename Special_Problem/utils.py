@@ -161,7 +161,6 @@ class Utils:
                     tile_labels.append(label)
                     has_annotation = True
         return tile_labels, tile_bboxes, has_annotation
-                    # yield label, (new_x, new_y, new_width, new_height)
 
     def get_bboxes_and_labels(image_path, file):
         csv_path, json_path  = Utils.replace(image_path)
@@ -234,8 +233,8 @@ class Utils:
                     augmented_image, augmented_bboxes, augmented_labels = preprocess_callback(
                         rgb_image, original_bboxes, original_labels
                         )
-                    yield "Augmented", augmented_image, augmented_bboxes, augmented_labels
-                yield "Original", rgb_image, original_bboxes, original_labels
+                    yield "Augmented", (augmented_image, augmented_bboxes, augmented_labels)
+                yield "Original", (rgb_image, original_bboxes, original_labels)
     
     @staticmethod
     def preprocess_augmented_image_annotations_helper(rgb_image, original_bboxes, original_labels):
@@ -250,7 +249,7 @@ class Utils:
         elif file in StaticVariable.test_list:
             return StaticVariable.actual_test_image_path, StaticVariable.actual_test_label_path
     
-    def get_corresponding_tile_path(file):
+    def get_corresponding_tiled_path(file):
         if file in StaticVariable.train_list:
             return StaticVariable.tile_train_image_path, StaticVariable.tile_train_label_path
         elif file in StaticVariable.val_list:
@@ -283,18 +282,24 @@ class Utils:
             f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
    
     @staticmethod
-    def process_and_save_tile(image, annotations):
+    def process_tile_generator(data):
+        image, bboxes, labels = data
+        annotations = list(zip(labels, bboxes)) # stores the entire list in memory, reusable
         """
         label, bbox = annotation
         """
         for tile, x0, y0, tile_id in Utils.image_tiling(image):
             tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
             if has_annotation:
-                fig, ax = plt.subplots(1, figsize=(5, 5))
-                ax.imshow(tile)
-                Utils.visualize_bboxes(tile_bboxes, tile_labels, ax)
-                plt.title(tile_id)
-                plt.show()
+                yield (tile, tile_bboxes, tile_labels), tile_id
+        
+    def save_data(data, image_path, label_path, prefix, file):
+        image, bboxes, labels = data
+        # Save image
+        cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
+        # Save labels
+        label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
+        Utils.write_annotations(image, bboxes, labels, label_file)
     
 class CallbackUtil:
     def __init__(self):
@@ -312,18 +317,21 @@ if __name__ == '__main__':
         
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
-    for data_type, image, bboxes, labels in Utils.preprocess_original_image_annotations_generator(
+    for data_type, data in Utils.preprocess_original_image_annotations_generator(
         invalid, 
         Utils.preprocess_augmented_image_annotations_helper,
         callback.set_file
     ):
-        image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
         file = callback.get_file()
         prefix = "augmented" if data_type == "Augmented" else "original"
         print(f"Processing {prefix} image: {file} ...")
-        # Save image
-        cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
-        # Save labels
-        label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
-        Utils.write_annotations(image, bboxes, labels, label_file)
-        break
+        
+        """ For Original Image | Untiled Image """
+        image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
+        Utils.save_data(data, image_path, label_path, prefix, file)
+        
+        """ Tiling """
+        image_path, label_path = Utils.get_corresponding_tiled_path(callback.get_file())
+        for tile_data, tile_id in Utils.process_tile_generator(data):
+            file_tile = file.replace(".", f"_{tile_id}.") 
+            Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
