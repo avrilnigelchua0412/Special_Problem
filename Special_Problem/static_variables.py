@@ -3,48 +3,49 @@ import pandas as pd
 
 class StaticVariable:
     formats = ['.jpeg', '.jpg', '.png']
-    data_path = '/root/Special_Problem/Special_Problem/Data'
+    data_path = '/home/Special_Problem/Data'
     tile_size = 512
     min_pixel_size = 8
+    value = [255, 255, 255]
     
     label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1}
     
-    train_list = (pd.read_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv'))['File'].to_list()
-    val_list = (pd.read_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv'))['File'].to_list()
-    test_list = (pd.read_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv'))['File'].to_list()    
+    train_list = (pd.read_csv('/home/Special_Problem/train_df_summary.csv'))['File'].to_list()
+    val_list = (pd.read_csv('/home/Special_Problem/val_df_summary.csv'))['File'].to_list()
+    test_list = (pd.read_csv('/home/Special_Problem/test_df_summary.csv'))['File'].to_list()    
     
-    tile_train_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/"
-    tile_train_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/"
+    tile_train_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/train/"
+    tile_train_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/train/"
     
-    actual_train_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/"
-    actual_train_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/"
+    actual_train_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/train/"
+    actual_train_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/train/"
    
-    tile_valid_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/valid/"
-    tile_valid_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    tile_valid_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/valid/"
+    tile_valid_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/valid/"
     
-    actual_valid_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/valid/"
-    actual_valid_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/valid/"
+    actual_valid_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/valid/"
+    actual_valid_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/valid/"
     
-    tile_test_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/valid/"
-    tile_test_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    tile_test_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/valid/"
+    tile_test_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/valid/"
     
-    actual_test_image_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/"
-    actual_test_label_path = "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/"
+    actual_test_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/test/"
+    actual_test_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/test/"
     
-    directories = ["/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/train/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/val/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/images/test/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/train/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/val/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_1/labels/test/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/train/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/val/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/images/test/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/train/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/val/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/labels/test/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/tiles/",
-    "/root/Special_Problem/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
+    directories = ["/home/Special_Problem/yolo_dataset_version_1/images/train/",
+    "/home/Special_Problem/yolo_dataset_version_1/images/val/",
+    "/home/Special_Problem/yolo_dataset_version_1/images/test/",
+    "/home/Special_Problem/yolo_dataset_version_1/labels/train/",
+    "/home/Special_Problem/yolo_dataset_version_1/labels/val/",
+    "/home/Special_Problem/yolo_dataset_version_1/labels/test/",
+    "/home/Special_Problem/yolo_dataset_version_2/images/train/",
+    "/home/Special_Problem/yolo_dataset_version_2/images/val/",
+    "/home/Special_Problem/yolo_dataset_version_2/images/test/",
+    "/home/Special_Problem/yolo_dataset_version_2/labels/train/",
+    "/home/Special_Problem/yolo_dataset_version_2/labels/val/",
+    "/home/Special_Problem/yolo_dataset_version_2/labels/test/",
+    "/home/Special_Problem/yolo_dataset_version_2/tiles/",
+    "/home/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
     
     transform = A.Compose(
         [

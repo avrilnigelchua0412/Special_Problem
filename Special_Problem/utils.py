@@ -191,9 +191,9 @@ class Utils:
             for file, thyrocytes, clusters in Utils.handle_data_count_summary(StaticVariable.data_path, invalid)
         ]
         summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
-        summary_df.to_csv('/root/Special_Problem/Special_Problem/dataset_summary.csv', index=False)
+        summary_df.to_csv('/home/Special_Problem/dataset_summary.csv', index=False)
         
-        summary = pd.read_csv("/root/Special_Problem/Special_Problem/dataset_summary.csv")
+        summary = pd.read_csv("/home/Special_Problem/dataset_summary.csv")
         summary["Cluster_Group"] = summary["Clusters_Count"].apply(StaticVariable.cluster_group)
         
         # Stratified split (80% train, 10% val, 10% test)
@@ -205,9 +205,9 @@ class Utils:
             temp_df, test_size=0.5, stratify=temp_df["Cluster_Group"], random_state=42
         )
         
-        train_df.to_csv('/root/Special_Problem/Special_Problem/train_df_summary.csv', index=False)
-        val_df.to_csv('/root/Special_Problem/Special_Problem/val_df_summary.csv', index=False)
-        test_df.to_csv('/root/Special_Problem/Special_Problem/test_df_summary.csv', index=False)      
+        train_df.to_csv('/home/Special_Problem/train_df_summary.csv', index=False)
+        val_df.to_csv('/home/Special_Problem/val_df_summary.csv', index=False)
+        test_df.to_csv('/home/Special_Problem/test_df_summary.csv', index=False)      
           
     def helper_os_walk(file_path=StaticVariable.data_path):
         for root, _, files in os.walk(file_path):
@@ -295,11 +295,30 @@ class Utils:
         
     def save_data(data, image_path, label_path, prefix, file):
         image, bboxes, labels = data
+        
+        image = Utils.pad_image(image)
+        
         # Save image
         cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
         # Save labels
         label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
         Utils.write_annotations(image, bboxes, labels, label_file)
+        
+    def pad_image(image):
+        img_height, img_width, _ = image.shape
+        desired = StaticVariable.tile_size
+
+        pad_bottom = max(desired - img_height, 0)
+        pad_right = max(desired - img_width, 0)
+
+        if pad_bottom > 0 or pad_right > 0:
+            image = cv2.copyMakeBorder(
+                image,
+                0, pad_bottom, 0, pad_right,
+                borderType=cv2.BORDER_CONSTANT,
+                value=StaticVariable.value
+            )
+        return image
     
 class CallbackUtil:
     def __init__(self):
