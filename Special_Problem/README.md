@@ -36,6 +36,17 @@
  - Plan: Train models on both untiled and tiled data, then compare results.
  - Goal: Determine if tiling provides measurable benefits for this dataset, given its specific microscope source.
 
+6. Gaussian Noise / Augmentation Strength
+ - Be careful with additive Gaussian noise: **too large a standard deviation (std)** will corrupt tiny features (pixels) and can destroy small objects that are already near the model’s detection limit.
+ - Practical guidance:
+   - Start with *small* noise levels and visually inspect augmented patches (sanity check).
+   - If you use normalized image ranges (0–1), small std like `0.01–0.05` is usually conservative; if using 0–255, choose proportionally (document whichever scale you use).
+ - If noise is required for robustness, prefer lighter photometric augmentations or mixup-like techniques instead of heavy pixel-level noise that can erase nuclei / tiny cells.
+
+7. Augmentation & Bounding Box Precision (Albumentations)
+ - Albumentations performs bbox transformations using floating-point arithmetic. After augmentation, bboxes may differ from originals by very small fractions (e.g., `0.000x`).
+ - This floating-point jitter is expected and normally harmless: if IoU between original and transformed bbox is `> 0.99`, treat it as equivalent (no need to discard).
+
 ### Modeling Approaches
 
 1. Cluster-Only Model
