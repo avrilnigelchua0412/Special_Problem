@@ -8,7 +8,8 @@ class StaticVariable:
     min_pixel_size = 8
     value = [255, 255, 255]
     
-    label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1}
+    # {'Thycocyte', 'Cluster', 'Thyrocytes', 'Thyrocyte'}
+    label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
     
     train_list = (pd.read_csv('/home/Special_Problem/train_df_summary.csv'))['File'].to_list()
     val_list = (pd.read_csv('/home/Special_Problem/val_df_summary.csv'))['File'].to_list()
@@ -20,14 +21,14 @@ class StaticVariable:
     actual_train_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/train/"
     actual_train_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/train/"
    
-    tile_valid_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/valid/"
-    tile_valid_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    tile_valid_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/val/"
+    tile_valid_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/val/"
     
-    actual_valid_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/valid/"
-    actual_valid_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/valid/"
+    actual_valid_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/val/"
+    actual_valid_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/val/"
     
-    tile_test_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/valid/"
-    tile_test_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/valid/"
+    tile_test_image_path = "/home/Special_Problem/yolo_dataset_version_2/images/test/"
+    tile_test_label_path = "/home/Special_Problem/yolo_dataset_version_2/labels/test/"
     
     actual_test_image_path = "/home/Special_Problem/yolo_dataset_version_1/images/test/"
     actual_test_label_path = "/home/Special_Problem/yolo_dataset_version_1/labels/test/"

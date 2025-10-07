@@ -121,11 +121,11 @@ class Utils:
         return x_center, y_center, w_norm, h_norm
     
     def csv_data_to_annotations(csv_data):
-        df_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
-        df_bboxes = csv_data[
+        thyrocyte_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
+        thyrocyte_bboxes = csv_data[
             ['bbox_x','bbox_y','bbox_width','bbox_height']].apply(
                 lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
-        return df_labels, df_bboxes
+        return thyrocyte_labels, thyrocyte_bboxes
     
     def json_data_to_annotations(json_data, file):
         cluster_bboxes = Utils.polygon_to_bounding_box(json_data, file)
@@ -166,9 +166,9 @@ class Utils:
         csv_path, json_path  = Utils.replace(image_path)
         csv_data = Utils.get_csv_data(csv_path)
         json_data = Utils.get_json_data(json_path)
-        df_labels, df_bboxes = Utils.csv_data_to_annotations(csv_data)
+        thyrocyte_labels, thyrocyte_bboxes = Utils.csv_data_to_annotations(csv_data)
         cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
-        return df_labels, df_bboxes, cluster_labels, cluster_bboxes
+        return thyrocyte_labels, thyrocyte_bboxes, cluster_labels, cluster_bboxes
    
     @staticmethod
     def handle_data_count_summary(invalid):
@@ -217,15 +217,32 @@ class Utils:
                     image_path = os.path.join(root, file)
                     yield image_path, file
 
+    def filter_less_than_eight_pixels(thyrocyte_bboxes, thyrocyte_labels):
+        filtered = [
+            (bbox, label)
+            for bbox, label in zip(thyrocyte_bboxes, thyrocyte_labels)
+            if bbox[2] > 8 and bbox[3] > 8
+        ]
+        
+        if filtered:
+            thyrocyte_bboxes, thyrocyte_labels = map(list, zip(*filtered))
+        else:
+            thyrocyte_bboxes, thyrocyte_labels = [], []
+        return thyrocyte_bboxes, thyrocyte_labels
+
     @staticmethod
     def preprocess_original_image_annotations_generator(invalid, preprocess_callback=None, file_callback=None):
         for image_path, file in Utils.helper_os_walk():
             if image_path not in invalid:
-                df_labels, df_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
+                thyrocyte_labels, thyrocyte_bboxes, cluster_labels, cluster_bboxes = Utils.get_bboxes_and_labels(image_path, file)
+                
+                thyrocyte_bboxes, thyrocyte_labels = Utils.filter_less_than_eight_pixels(thyrocyte_bboxes, thyrocyte_labels)
                 
                 rgb_image = Utils.get_image_data(image_path)
-                original_bboxes = df_bboxes + cluster_bboxes
-                original_labels = df_labels + cluster_labels
+                original_bboxes = thyrocyte_bboxes + cluster_bboxes
+                original_labels = thyrocyte_labels + cluster_labels
+                
+                # Keep only valid (bbox, label) pairs
                 
                 if file_callback is not None:
                     file_callback(file)
@@ -344,7 +361,6 @@ if __name__ == '__main__':
     ):
         file = callback.get_file()
         prefix = "augmented" if data_type == "Augmented" else "original"
-        print(f"Processing {prefix} image: {file} ...")
         
         """ For Original Image | Untiled Image """
         image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
@@ -355,4 +371,3 @@ if __name__ == '__main__':
         for tile_data, tile_id in Utils.process_tile_generator(data):
             file_tile = file.replace(".", f"_{tile_id}.") 
             Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
-        break
