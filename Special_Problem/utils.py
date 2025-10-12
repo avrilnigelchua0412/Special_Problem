@@ -191,9 +191,9 @@ class Utils:
             for file, thyrocytes, clusters in Utils.handle_data_count_summary(invalid)
         ]
         summary_df = pd.DataFrame(rows, columns=['File', 'Thyrocytes_Count', 'Clusters_Count'])
-        summary_df.to_csv('/home/Special_Problem/dataset_summary.csv', index=False)
+        summary_df.to_csv('/workspace/Special_Problem/dataset_summary.csv', index=False)
         
-        summary = pd.read_csv("/home/Special_Problem/dataset_summary.csv")
+        summary = pd.read_csv("/workspace/Special_Problem/dataset_summary.csv")
         summary["Cluster_Group"] = summary["Clusters_Count"].apply(StaticVariable.cluster_group)
         
         # Stratified split (80% train, 10% val, 10% test)
@@ -205,9 +205,9 @@ class Utils:
             temp_df, test_size=0.5, stratify=temp_df["Cluster_Group"], random_state=42
         )
         
-        train_df.to_csv('/home/Special_Problem/train_df_summary.csv', index=False)
-        val_df.to_csv('/home/Special_Problem/val_df_summary.csv', index=False)
-        test_df.to_csv('/home/Special_Problem/test_df_summary.csv', index=False)      
+        train_df.to_csv('/workspace/Special_Problem/train_df_summary.csv', index=False)
+        val_df.to_csv('/workspace/Special_Problem/val_df_summary.csv', index=False)
+        test_df.to_csv('/workspace/Special_Problem/test_df_summary.csv', index=False)      
           
     def helper_os_walk(file_path=StaticVariable.data_path):
         for root, _, files in os.walk(file_path):
@@ -296,7 +296,7 @@ class Utils:
             x_min, y_min, bbox_width, bbox_height, img_width, img_height
         )
         with open(output_path, 'a') as f:
-            f.write(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
+            f.write(f"{class_id} {x_center:.8f} {y_center:.8f} {w_norm:.8f} {h_norm:.8f}\n")
    
     @staticmethod
     def process_tile_generator(data):
@@ -313,18 +313,23 @@ class Utils:
     def save_data(data, image_path, label_path, prefix, file):
         image, bboxes, labels = data
         
+        # fig, ax = plt.subplots(1, figsize=(15, 15))
+        # ax.imshow(image)
+        # Utils.visualize_bboxes(bboxes, labels, ax)
+        # plt.savefig("debug_bbox.png")   # Save to file instead of showing
+        # print("Saved visualization as debug_bbox.png")
         image = Utils.pad_image(image)
         
         # Save image
         cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
-        # Save labels
+        # # Save labels
         label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
         Utils.write_annotations(image, bboxes, labels, label_file)
         
     def pad_image(image):
         img_height, img_width, _ = image.shape
         desired = StaticVariable.tile_size
-
+        
         pad_bottom = max(desired - img_height, 0)
         pad_right = max(desired - img_width, 0)
 
@@ -353,6 +358,7 @@ if __name__ == '__main__':
         
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
+    
     Utils.data_split_csv(invalid)
     for data_type, data in Utils.preprocess_original_image_annotations_generator(
         invalid, 
