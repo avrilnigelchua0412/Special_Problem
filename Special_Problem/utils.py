@@ -299,7 +299,7 @@ class Utils:
             f.write(f"{class_id} {x_center:.8f} {y_center:.8f} {w_norm:.8f} {h_norm:.8f}\n")
    
     @staticmethod
-    def process_tile_generator(data):
+    def process_tile_generator(data, prefix):
         image, bboxes, labels = data
         annotations = list(zip(labels, bboxes)) # stores the entire list in memory, reusable
         """
@@ -308,7 +308,8 @@ class Utils:
         for tile, x0, y0, tile_id in Utils.image_tiling(image):
             tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
             if has_annotation:
-                yield (tile, tile_bboxes, tile_labels), tile_id
+                if (prefix == "augmented" and ("Cluster" in tile_labels or "Clusters" in tile_labels)) or prefix == "original":
+                    yield (tile, tile_bboxes, tile_labels), tile_id
         
     def save_data(data, image_path, label_path, prefix, file):
         image, bboxes, labels = data
@@ -368,12 +369,12 @@ if __name__ == '__main__':
         file = callback.get_file()
         prefix = "augmented" if data_type == "Augmented" else "original"
         
-        """ For Original Image | Untiled Image """
-        image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
-        Utils.save_data(data, image_path, label_path, prefix, file)
+        # """ For Original Image | Untiled Image """
+        # image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
+        # Utils.save_data(data, image_path, label_path, prefix, file)
         
         """ Tiling """
         image_path, label_path = Utils.get_corresponding_tiled_path(callback.get_file())
-        for tile_data, tile_id in Utils.process_tile_generator(data):
+        for tile_data, tile_id in Utils.process_tile_generator(data, prefix):
             file_tile = file.replace(".", f"_{tile_id}.") 
             Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
