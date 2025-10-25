@@ -1,5 +1,6 @@
 import albumentations as A
 import pandas as pd
+import os
 
 class StaticVariable:
     formats = ['.jpeg', '.jpg', '.png']
@@ -11,9 +12,24 @@ class StaticVariable:
     # {'Thycocyte', 'Cluster', 'Thyrocytes', 'Thyrocyte'}
     label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
     
-    train_list = (pd.read_csv('/workspace/Special_Problem/train_df_summary.csv'))['File'].to_list()
-    val_list = (pd.read_csv('/workspace/Special_Problem/val_df_summary.csv'))['File'].to_list()
-    test_list = (pd.read_csv('/workspace/Special_Problem/test_df_summary.csv'))['File'].to_list()    
+    def load_file_list(path, return_none=True):
+        """
+        Reads a CSV file and returns the 'File' column as a list.
+        If the file does not exist, returns None or [] depending on `return_none`.
+        """
+        if not os.path.exists(path):
+            return None if return_none else []
+
+        try:
+            df = pd.read_csv(path)
+            return df['File'].to_list() if 'File' in df.columns else None
+        except Exception as e:
+            print(f"Error reading {path}: {e}")
+            return None if return_none else []
+
+    train_list = load_file_list('/workspace/Special_Problem/train_df_summary.csv')
+    val_list   = load_file_list('/workspace/Special_Problem/val_df_summary.csv')
+    test_list  = load_file_list('/workspace/Special_Problem/test_df_summary.csv')
     
     tile_train_image_path = "/workspace/Special_Problem/yolo_dataset_version_2/images/train/"
     tile_train_label_path = "/workspace/Special_Problem/yolo_dataset_version_2/labels/train/"
@@ -33,21 +49,25 @@ class StaticVariable:
     actual_test_image_path = "/workspace/Special_Problem/yolo_dataset_version_1/images/test/"
     actual_test_label_path = "/workspace/Special_Problem/yolo_dataset_version_1/labels/test/"
     
-    directories = ["/workspace/Special_Problem/yolo_dataset_version_1/images/train/",
-    "/workspace/Special_Problem/yolo_dataset_version_1/images/val/",
-    "/workspace/Special_Problem/yolo_dataset_version_1/images/test/",
-    "/workspace/Special_Problem/yolo_dataset_version_1/labels/train/",
-    "/workspace/Special_Problem/yolo_dataset_version_1/labels/val/",
-    "/workspace/Special_Problem/yolo_dataset_version_1/labels/test/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/images/train/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/images/val/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/images/test/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/labels/train/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/labels/val/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/labels/test/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/tiles/",
-    "/workspace/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
+    tile_path = '/workspace/Special_Problem/yolo_dataset_version_2/'
     
+    
+
+    DIR_PATH = ["/workspace/Special_Problem/yolo_dataset_version_1/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_1/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_1/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_1/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_1/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_1/labels/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/labels/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/tiles/",
+        "/workspace/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
+        
     transform = A.Compose(
         [
             # Geometric Transformations
@@ -56,10 +76,12 @@ class StaticVariable:
                 A.VerticalFlip(p=1),
                 A.RandomRotate90(p=1),
             ], p=1),
+            
             # Photometric Transformations
             A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
             A.HueSaturationValue(hue_shift_limit=10, sat_shift_limit=15, val_shift_limit=10, p=0.5),
             A.GaussNoise(std_range=(0.03, 0.05), p=1.0), # 1% to 5% noise
+            
             # Occlusion/regularization
             A.CoarseDropout(
             num_holes_range=(5, 5),

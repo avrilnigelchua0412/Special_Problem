@@ -7,6 +7,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
+import shutil
 
 class Utils:
     @staticmethod
@@ -86,7 +87,7 @@ class Utils:
                 y1 = min(y0 + tile_size, img_height)
                 tile = original_image[y0:y1, x0:x1]
                 yield tile, x0, y0, tile_id
-    
+
     def polygon_to_bounding_box(json_data, file):
         bounding_box_list = []
         for item in json_data[file].values():
@@ -104,7 +105,7 @@ class Utils:
                         # Match format: [x, y, width, height]
                         bounding_box_list.append([int(x_min), int(y_min), int(bbox_width), int(bbox_height)])
         return bounding_box_list
-    
+
     def get_coordinates_intersections(x_min, t_x_min, y_min, t_y_min, x_max, t_x_max, y_max, t_y_max):
         return (
             max(x_min, t_x_min),   # overlap left
@@ -112,26 +113,26 @@ class Utils:
             min(x_max, t_x_max),   # overlap right
             min(y_max, t_y_max)    # overlap bottom
         )
-            
+
     def get_normalize_bounding_box(x_min, y_min, bbox_width, bbox_height, img_width, img_height):
         x_center = (x_min + bbox_width / 2) / img_width
         y_center = (y_min + bbox_height / 2) / img_height
         w_norm = bbox_width / img_width
         h_norm = bbox_height / img_height
         return x_center, y_center, w_norm, h_norm
-    
+
     def csv_data_to_annotations(csv_data):
         thyrocyte_labels  = csv_data['label_name'].tolist()  # Assuming single class for simplicity
         thyrocyte_bboxes = csv_data[
             ['bbox_x','bbox_y','bbox_width','bbox_height']].apply(
                 lambda x: [x['bbox_x'], x['bbox_y'], x['bbox_width'], x['bbox_height']], axis=1).tolist()
         return thyrocyte_labels, thyrocyte_bboxes
-    
+
     def json_data_to_annotations(json_data, file):
         cluster_bboxes = Utils.polygon_to_bounding_box(json_data, file)
         cluster_labels = ["Cluster"] * len(cluster_bboxes)
         return cluster_labels, cluster_bboxes
-        
+
     def adjust_bboxes_for_tile(annotations, x0, y0,
                                tile_size=StaticVariable.tile_size,
                                min_pixel_size=StaticVariable.min_pixel_size):
@@ -169,7 +170,7 @@ class Utils:
         thyrocyte_labels, thyrocyte_bboxes = Utils.csv_data_to_annotations(csv_data)
         cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
         return thyrocyte_labels, thyrocyte_bboxes, cluster_labels, cluster_bboxes
-   
+
     @staticmethod
     def handle_data_count_summary(invalid):
         for image_path, file in Utils.helper_os_walk():
@@ -183,7 +184,7 @@ class Utils:
                     yield file, thyrocytes, clusters
                 except KeyError as e:
                     print(f"{e} in {file}")
-                    
+
     @staticmethod
     def data_split_csv(invalid):
         rows = [
@@ -308,8 +309,8 @@ class Utils:
         for tile, x0, y0, tile_id in Utils.image_tiling(image):
             tile_labels, tile_bboxes, has_annotation = Utils.adjust_bboxes_for_tile(annotations, x0, y0)
             if has_annotation:
-                if (prefix == "augmented" and ("Cluster" in tile_labels or "Clusters" in tile_labels)) or prefix == "original":
-                    yield (tile, tile_bboxes, tile_labels), tile_id
+                # if (prefix == "augmented" and ("Cluster" in tile_labels or "Clusters" in tile_labels)) or prefix == "original":
+                yield (tile, tile_bboxes, tile_labels), tile_id
         
     def save_data(data, image_path, label_path, prefix, file):
         image, bboxes, labels = data
@@ -343,6 +344,60 @@ class Utils:
             )
         return image
     
+    def cluster_exist(content):
+        labels = list(content.split('\n'))
+        for label in labels:
+            if label.split(' ')[0] == '0':
+                return True
+        return False
+    
+    def get_datatype(file):
+        if file in StaticVariable.train_list:
+            return 'train' 
+        if file in StaticVariable.val_list:
+            return 'val'
+        if file in StaticVariable.test_list:
+            return 'test'
+            
+    def tile_to_content_generator(file_path=StaticVariable.tile_path):
+        for tile_path, _ in Utils.helper_os_walk(file_path=file_path):
+            file = Utils.get_file(tile_path)
+            datatype = Utils.get_datatype(file)
+            label_path = f"{(os.path.splitext(tile_path)[0]).replace('images', 'labels')}.txt"
+            content = open(label_path).read()
+            yield datatype, file, tile_path, label_path, Utils.cluster_exist(content)
+            
+    def tile_to_content_to_csv():
+        pd.DataFrame(
+            [
+                { 'datatype' : datatype, 'file' : file, 'tile_path' : tile_path, 'label_path' : label_path, 'cluster_exist' : cluster_exist}
+                for datatype, file, tile_path, label_path, cluster_exist in Utils.tile_to_content_generator()
+            ], columns=['datatype', 'file', 'tile_path', 'label_path', 'cluster_exist']
+            ).to_csv(
+                '/workspace/Special_Problem/tile_dataset_summary.csv', index=False
+                )
+    
+    def get_file(file):
+        file = file.split('/')[-1]
+        file_name = re.search(r'LS-(\d+)', file)
+        return file_name.group(0) + "." + file.split('.')[-1]
+    
+    def copy_tiles_and_labels(df, dest_dir):
+        os.makedirs(dest_dir, exist_ok=True)
+        os.makedirs(dest_dir.replace("images", "labels"), exist_ok=True)
+
+        for _, row in df.iterrows():
+            tile_path = row['tile_path']
+            label_path = row['label_path']
+            
+            # Copy image
+            if os.path.exists(tile_path):
+                shutil.copy(tile_path, os.path.join(dest_dir, os.path.basename(tile_path)))
+            
+            # Copy label
+            if os.path.exists(label_path):
+                shutil.copy(label_path, os.path.join(dest_dir.replace("images", "labels"), os.path.basename(label_path)))
+    
 class CallbackUtil:
     def __init__(self):
         self.file = None
@@ -354,27 +409,62 @@ class CallbackUtil:
         return self.file
 
 if __name__ == '__main__':
-    for dir in StaticVariable.directories:
-        os.makedirs(dir, exist_ok=True)
+    # for dir in StaticVariable.DIR_PATH:
+    #     os.makedirs(dir, exist_ok=True)
         
-    callback = CallbackUtil()
-    invalid = Utils.check_dataset()
+    # callback = CallbackUtil()
+    # invalid = Utils.check_dataset()
     
-    Utils.data_split_csv(invalid)
-    for data_type, data in Utils.preprocess_original_image_annotations_generator(
-        invalid, 
-        Utils.preprocess_augmented_image_annotations_helper,
-        callback.set_file
-    ):
-        file = callback.get_file()
-        prefix = "augmented" if data_type == "Augmented" else "original"
+    # Utils.data_split_csv(invalid)
+    # for data_type, data in Utils.preprocess_original_image_annotations_generator(
+    #     invalid, 
+    #     Utils.preprocess_augmented_image_annotations_helper,
+    #     callback.set_file
+    # ):
+    #     file = callback.get_file()
+    #     prefix = "augmented" if data_type == "Augmented" else "original"
         
-        # """ For Original Image | Untiled Image """
-        # image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
-        # Utils.save_data(data, image_path, label_path, prefix, file)
+    #     # """ For Original Image | Untiled Image """
+    #     # image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
+    #     # Utils.save_data(data, image_path, label_path, prefix, file)
         
-        """ Tiling """
-        image_path, label_path = Utils.get_corresponding_tiled_path(callback.get_file())
-        for tile_data, tile_id in Utils.process_tile_generator(data, prefix):
-            file_tile = file.replace(".", f"_{tile_id}.") 
-            Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
+    #     """ Tiling """
+    #     image_path, label_path = Utils.get_corresponding_tiled_path(callback.get_file())
+    #     for tile_data, tile_id in Utils.process_tile_generator(data, prefix):
+    #         file_tile = file.replace(".", f"_{tile_id}.") 
+    #         Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
+            
+    Utils.tile_to_content_to_csv()
+    
+    df = pd.read_csv("tile_dataset_summary.csv")
+    
+    # Split Dataframe
+    df_train = df[df['datatype'] == 'train']
+    
+    df_val = df[df['datatype'] == 'val']
+    df_test = df[df['datatype'] == 'test']
+    
+    print("Count: ", df_train.count(), df_val.count(), df_test.count())
+    
+    # Split by cluster existence
+    cluster_tiles = df_train[df_train['cluster_exist'] == True]
+    thyro_only_tiles = df_train[df_train['cluster_exist'] == False]
+    
+    # Randomly sample 30% of thyro-only tiles
+    sample_frac = 0.3
+    thyro_sample = thyro_only_tiles.sample(frac=sample_frac, random_state=42)
+    
+    # Merge both sets
+    filtered_df = pd.concat([cluster_tiles, thyro_sample], ignore_index=True)
+
+    # Shuffle
+    filtered_df = filtered_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
+    
+    # Save to new CSV (for reproducibility)
+    filtered_df.to_csv("data_train_tiles_filtered.csv", index=False)
+    df_val.to_csv("data_val_tiles.csv", index=False)
+    df_test.to_csv("data_test_tiles.csv", index=False)
+    
+    Utils.copy_tiles_and_labels(filtered_df, '/workspace/Special_Problem/yolo_dataset_version_3/images/train')
+    Utils.copy_tiles_and_labels(df_val, '/workspace/Special_Problem/yolo_dataset_version_3/images/val')
+    Utils.copy_tiles_and_labels(df_test, '/workspace/Special_Problem/yolo_dataset_version_3/images/test')
