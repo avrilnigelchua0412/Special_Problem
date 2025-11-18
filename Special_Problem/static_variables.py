@@ -8,9 +8,11 @@ class StaticVariable:
     tile_size = 512
     min_pixel_size = 8
     value = [255, 255, 255]
-    
+    overlap = .40
     # {'Thycocyte', 'Cluster', 'Thyrocytes', 'Thyrocyte'}
-    label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
+    # label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
+    label_map = {'Cluster' : 0, 'Clusters': 0}
+    # label_map = {'Thyrocyte': 0, 'Thyrocytes': 0, "Thycocyte": 0}
     
     def load_file_list(path, return_none=True):
         """
@@ -31,20 +33,20 @@ class StaticVariable:
     val_list   = load_file_list('/workspace/Special_Problem/val_df_summary.csv')
     test_list  = load_file_list('/workspace/Special_Problem/test_df_summary.csv')
     
-    tile_train_image_path = "/workspace/Special_Problem/yolo_dataset_version_2/images/train/"
-    tile_train_label_path = "/workspace/Special_Problem/yolo_dataset_version_2/labels/train/"
+    tile_train_image_path = "/workspace/Special_Problem/yolo_dataset_version_8/images/train/"
+    tile_train_label_path = "/workspace/Special_Problem/yolo_dataset_version_8/labels/train/"
     
     actual_train_image_path = "/workspace/Special_Problem/yolo_dataset_version_1/images/train/"
     actual_train_label_path = "/workspace/Special_Problem/yolo_dataset_version_1/labels/train/"
    
-    tile_valid_image_path = "/workspace/Special_Problem/yolo_dataset_version_2/images/val/"
-    tile_valid_label_path = "/workspace/Special_Problem/yolo_dataset_version_2/labels/val/"
+    tile_valid_image_path = "/workspace/Special_Problem/yolo_dataset_version_8/images/val/"
+    tile_valid_label_path = "/workspace/Special_Problem/yolo_dataset_version_8/labels/val/"
     
     actual_valid_image_path = "/workspace/Special_Problem/yolo_dataset_version_1/images/val/"
     actual_valid_label_path = "/workspace/Special_Problem/yolo_dataset_version_1/labels/val/"
     
-    tile_test_image_path = "/workspace/Special_Problem/yolo_dataset_version_2/images/test/"
-    tile_test_label_path = "/workspace/Special_Problem/yolo_dataset_version_2/labels/test/"
+    tile_test_image_path = "/workspace/Special_Problem/yolo_dataset_version_8/images/test/"
+    tile_test_label_path = "/workspace/Special_Problem/yolo_dataset_version_8/labels/test/"
     
     actual_test_image_path = "/workspace/Special_Problem/yolo_dataset_version_1/images/test/"
     actual_test_label_path = "/workspace/Special_Problem/yolo_dataset_version_1/labels/test/"
@@ -66,7 +68,31 @@ class StaticVariable:
         "/workspace/Special_Problem/yolo_dataset_version_2/labels/val/",
         "/workspace/Special_Problem/yolo_dataset_version_2/labels/test/",
         "/workspace/Special_Problem/yolo_dataset_version_2/tiles/",
-        "/workspace/Special_Problem/yolo_dataset_version_2/augmented_tiles/"]
+        "/workspace/Special_Problem/yolo_dataset_version_2/augmented_tiles/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_5/labels/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_6/labels/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_7/labels/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/images/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/images/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/images/test/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/labels/train/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/labels/val/",
+        "/workspace/Special_Problem/yolo_dataset_version_8/labels/test/",]
         
     transform = A.Compose(
         [
