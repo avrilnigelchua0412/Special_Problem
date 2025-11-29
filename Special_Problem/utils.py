@@ -9,6 +9,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import shutil
 
+ERROR = set()
+
 class Utils:
     @staticmethod
     def check_dataset():
@@ -33,11 +35,24 @@ class Utils:
         with open(json_path, 'r') as f:
             data = json.load(f)
         return data
-    
+        
     @staticmethod
-    def get_csv_data(csv_path):
-        data = pd.read_csv(csv_path)
-        return data
+    def get_csv_data(csv_path, file):
+        df = pd.read_csv(csv_path)
+
+        # Identify trash BEFORE filtering
+        trash_data = df[df["image_name"] != file]
+
+        # Identify correct rows
+        valid_data = df[df["image_name"] == file]
+
+        if not trash_data.empty:
+            # print(f"[WARNING] Found trash rows (image_name != {file}):")
+            # print(file.split('.')[0].split('-')[-1])
+            ERROR.add(file.split('.')[0].split('-')[-1])
+            # print(trash_data)
+
+        return valid_data
     
     @staticmethod
     def get_image_data(image_path):
@@ -51,9 +66,10 @@ class Utils:
         for box, label in zip(bboxes, labels):
             x_min, y_min, box_width, box_height = box
             # choose color based on label
-            color = "red" if label == 'Cluster' or label == 'Clusters' else "blue"
+            color = "red" if label == 'Cluster' or label == 'Clusters' else "black"
             # choose linewidth
-            linewidth = 3 if label == 'Cluster' or label == 'Clusters' else 0.05
+            linewidth = 1 if label == 'Cluster' or label == 'Clusters' else 1.5
+            label = "Cluster" if color == 'red' else "Thyrocyte"
             # draw bounding box
             ax.add_patch(plt.Rectangle(
                 (x_min, y_min),
@@ -67,7 +83,7 @@ class Utils:
                 x_min, y_min - 5,
                 label,
                 color=color,
-                fontsize=2,
+                fontsize=8,
                 weight="bold"
             )
     
@@ -165,7 +181,7 @@ class Utils:
 
     def get_bboxes_and_labels(image_path, file):
         csv_path, json_path  = Utils.replace(image_path)
-        csv_data = Utils.get_csv_data(csv_path)
+        csv_data = Utils.get_csv_data(csv_path, file)
         json_data = Utils.get_json_data(json_path)
         thyrocyte_labels, thyrocyte_bboxes = Utils.csv_data_to_annotations(csv_data)
         cluster_labels, cluster_bboxes = Utils.json_data_to_annotations(json_data, file)
@@ -177,7 +193,7 @@ class Utils:
             if image_path not in invalid:
                 try:
                     csv_path, json_path  = Utils.replace(image_path)
-                    csv_data = Utils.get_csv_data(csv_path)
+                    csv_data = Utils.get_csv_data(csv_path, file)
                     json_data = Utils.get_json_data(json_path)
                     thyrocytes = csv_data['label_name'].count()
                     clusters = sum(len(item) for item in json_data[file].values() if isinstance(item, dict) and item)
@@ -352,11 +368,6 @@ class Utils:
     def save_data(data, image_path, label_path, prefix, file):
         image, bboxes, labels = data
         
-        # fig, ax = plt.subplots(1, figsize=(15, 15))
-        # ax.imshow(image)
-        # Utils.visualize_bboxes(bboxes, labels, ax)
-        # plt.savefig("debug_bbox.png")   # Save to file instead of showing
-        # print("Saved visualization as debug_bbox.png")
         image = Utils.pad_image(image)
         
         # Save image
@@ -468,7 +479,15 @@ class Utils:
         Utils.copy_tiles_and_labels(filtered_df, '/workspace/Special_Problem/yolo_dataset_version_3/images/train')
         Utils.copy_tiles_and_labels(df_val, '/workspace/Special_Problem/yolo_dataset_version_3/images/val')
         Utils.copy_tiles_and_labels(df_test, '/workspace/Special_Problem/yolo_dataset_version_3/images/test')
-    
+        
+    def saved_original_images_for_visualization(data, file):
+        image, bboxes, labels = data
+        fig, ax = plt.subplots(1, figsize=(20, 15))
+        ax.imshow(image)
+        Utils.visualize_bboxes(bboxes, labels, ax)
+        plt.savefig(f"data_with_annotations/{file}")   # Save to file instead of showing
+        plt.close()
+
 class CallbackUtil:
     def __init__(self):
         self.file = None
@@ -480,22 +499,43 @@ class CallbackUtil:
         return self.file
 
 if __name__ == '__main__':
-    for dir in StaticVariable.DIR_PATH:
-        os.makedirs(dir, exist_ok=True)
+    # PATH = 'Checked Data'
+    # for image_path, file in Utils.helper_os_walk(PATH):
+    #     csv_path = image_path.replace('images', 'labels').split('.')[0] + '.csv'
+    #     csv_data = Utils.get_csv_data(csv_path, file)
+    #     rgb_image = Utils.get_image_data(image_path)
+    #     thyrocyte_labels, thyrocyte_bboxes = Utils.csv_data_to_annotations(csv_data)
+    #     fig, ax = plt.subplots(1, figsize=(26, 20))
+    #     ax.imshow(rgb_image)
+    #     Utils.visualize_bboxes(thyrocyte_bboxes, thyrocyte_labels, ax)
+    #     plt.savefig(f"data_with_annotations/{file}")   # Save to file instead of showing
+    #     plt.close()
+        
+    # for dir in StaticVariable.DIR_PATH:
+    #     os.makedirs(dir, exist_ok=True)
         
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
     
-    Utils.data_split_csv(invalid)
+    # for i in invalid:
+    #     print(f"Invalid dataset found: {i}")
+        
+    # Utils.data_split_csv(invalid)
+    
     for data_type, data in Utils.preprocess_original_image_annotations_generator(
         invalid, 
         Utils.preprocess_augmented_image_annotations_helper,
         callback.set_file,
-        label="Cluster"
+        label="Both"
     ):
         file = callback.get_file()
         prefix = "augmented" if data_type == "Augmented" else "original"
         
+        # """Save Original Images for Visualization"""
+        # if prefix == 'original':
+        #     print(f"Saving visualization for {file}...")
+        #     Utils.saved_original_images_for_visualization(data, file)
+            
         # """ For Original Image | Untiled Image """
         # image_path, label_path = Utils.get_corresponding_actual_path(callback.get_file())
         # Utils.save_data(data, image_path, label_path, prefix, file)
@@ -505,4 +545,8 @@ if __name__ == '__main__':
         for tile_data, tile_id in Utils.process_tile_generator(data, prefix):
             file_tile = file.replace(".", f"_{tile_id}.") 
             Utils.save_data(tile_data, image_path, label_path, prefix, file_tile)
+    
+    # print("Errors found in files: ")
+    # sorted_errors = sorted(ERROR)
+    # print(sorted_errors)
     # Utils.filter_tiles_with_thyrocyte()
