@@ -8,11 +8,11 @@ class StaticVariable:
     tile_size = 512
     min_pixel_size = 8
     value = [255, 255, 255]
-    overlap = .40
+    overlap = .25
     # {'Thycocyte', 'Cluster', 'Thyrocytes', 'Thyrocyte'}
-    label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
+    # label_map = {'Cluster' : 0, 'Clusters': 0, 'Thyrocyte': 1, 'Thyrocytes': 1, "Thycocyte": 1}
     # label_map = {'Cluster' : 0, 'Clusters': 0}
-    # label_map = {'Thyrocyte': 0, 'Thyrocytes': 0, "Thycocyte": 0}
+    label_map = {'Thyrocyte': 0, 'Thyrocytes': 0, "Thycocyte": 0}
     
     def load_file_list(path, return_none=True):
         """
@@ -51,7 +51,7 @@ class StaticVariable:
     actual_test_image_path = "/workspace/Special_Problem/yolo_dataset_version_1/images/test/"
     actual_test_label_path = "/workspace/Special_Problem/yolo_dataset_version_1/labels/test/"
     
-    tile_path = '/workspace/Special_Problem/yolo_dataset_version_2/'
+    # tile_path = '/workspace/Special_Problem/yolo_dataset_version_2/'
 
     DIR_PATH = [
         "/workspace/Special_Problem/yolo_dataset_version_1/images/train/",

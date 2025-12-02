@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import train_test_split
 import shutil
+from PIL import Image, ImageDraw
 
 ERROR = set()
 
@@ -369,9 +370,12 @@ class Utils:
         image, bboxes, labels = data
         
         image = Utils.pad_image(image)
+        pil_img = Image.fromarray(image.astype('uint8')).convert("RGB")
         
         # Save image
-        cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
+        # cv2.imwrite(os.path.join(image_path, f"{prefix}_{file}"), image)
+        pil_img.save(os.path.join(image_path, f"{prefix}_{file}"), quality=100)
+        
         # # Save labels
         label_file = os.path.join(label_path, f"{prefix}_{os.path.splitext(file)[0]}.txt")
         Utils.write_annotations(image, bboxes, labels, label_file)
@@ -407,23 +411,23 @@ class Utils:
         if file in StaticVariable.test_list:
             return 'test'
             
-    def tile_to_content_generator(file_path=StaticVariable.tile_path):
-        for tile_path, _ in Utils.helper_os_walk(file_path=file_path):
-            file = Utils.get_file(tile_path)
-            datatype = Utils.get_datatype(file)
-            label_path = f"{(os.path.splitext(tile_path)[0]).replace('images', 'labels')}.txt"
-            content = open(label_path).read()
-            yield datatype, file, tile_path, label_path, Utils.cluster_exist(content)
+    # def tile_to_content_generator(file_path=StaticVariable.tile_path):
+    #     for tile_path, _ in Utils.helper_os_walk(file_path=file_path):
+    #         file = Utils.get_file(tile_path)
+    #         datatype = Utils.get_datatype(file)
+    #         label_path = f"{(os.path.splitext(tile_path)[0]).replace('images', 'labels')}.txt"
+    #         content = open(label_path).read()
+    #         yield datatype, file, tile_path, label_path, Utils.cluster_exist(content)
             
-    def tile_to_content_to_csv():
-        pd.DataFrame(
-            [
-                { 'datatype' : datatype, 'file' : file, 'tile_path' : tile_path, 'label_path' : label_path, 'cluster_exist' : cluster_exist}
-                for datatype, file, tile_path, label_path, cluster_exist in Utils.tile_to_content_generator()
-            ], columns=['datatype', 'file', 'tile_path', 'label_path', 'cluster_exist']
-            ).to_csv(
-                '/workspace/Special_Problem/tile_dataset_summary.csv', index=False
-                )
+    # def tile_to_content_to_csv():
+    #     pd.DataFrame(
+    #         [
+    #             { 'datatype' : datatype, 'file' : file, 'tile_path' : tile_path, 'label_path' : label_path, 'cluster_exist' : cluster_exist}
+    #             for datatype, file, tile_path, label_path, cluster_exist in Utils.tile_to_content_generator()
+    #         ], columns=['datatype', 'file', 'tile_path', 'label_path', 'cluster_exist']
+    #         ).to_csv(
+    #             '/workspace/Special_Problem/tile_dataset_summary.csv', index=False
+    #             )
     
     def get_file(file):
         file = file.split('/')[-1]
@@ -446,48 +450,74 @@ class Utils:
             if os.path.exists(label_path):
                 shutil.copy(label_path, os.path.join(dest_dir.replace("images", "labels"), os.path.basename(label_path)))
     
-    def filter_tiles_with_thyrocyte(sample_frac=0.3):
-        Utils.tile_to_content_to_csv()
-        df = pd.read_csv("tile_dataset_summary.csv")
-        # Split Dataframe
-        df_train = df[df['datatype'] == 'train']
+    # def filter_tiles_with_thyrocyte(sample_frac=0.3):
+    #     Utils.tile_to_content_to_csv()
+    #     df = pd.read_csv("tile_dataset_summary.csv")
+    #     # Split Dataframe
+    #     df_train = df[df['datatype'] == 'train']
         
-        df_val = df[df['datatype'] == 'val']
-        df_test = df[df['datatype'] == 'test']
+    #     df_val = df[df['datatype'] == 'val']
+    #     df_test = df[df['datatype'] == 'test']
         
-        print("Count: ", df_train.count(), df_val.count(), df_test.count())
+    #     print("Count: ", df_train.count(), df_val.count(), df_test.count())
         
-        # Split by cluster existence
-        cluster_tiles = df_train[df_train['cluster_exist'] == True]
-        thyro_only_tiles = df_train[df_train['cluster_exist'] == False]
+    #     # Split by cluster existence
+    #     cluster_tiles = df_train[df_train['cluster_exist'] == True]
+    #     thyro_only_tiles = df_train[df_train['cluster_exist'] == False]
         
-        # Randomly sample 30% of thyro-only tiles
-        sample_frac = sample_frac
-        thyro_sample = thyro_only_tiles.sample(frac=sample_frac, random_state=42)
+    #     # Randomly sample 30% of thyro-only tiles
+    #     sample_frac = sample_frac
+    #     thyro_sample = thyro_only_tiles.sample(frac=sample_frac, random_state=42)
         
-        # Merge both sets
-        filtered_df = pd.concat([cluster_tiles, thyro_sample], ignore_index=True)
+    #     # Merge both sets
+    #     filtered_df = pd.concat([cluster_tiles, thyro_sample], ignore_index=True)
 
-        # Shuffle
-        filtered_df = filtered_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
+    #     # Shuffle
+    #     filtered_df = filtered_df.sample(frac=1.0, random_state=42).reset_index(drop=True)
         
-        # Save to new CSV (for reproducibility)
-        filtered_df.to_csv("data_train_tiles_filtered.csv", index=False)
-        df_val.to_csv("data_val_tiles.csv", index=False)
-        df_test.to_csv("data_test_tiles.csv", index=False)
+    #     # Save to new CSV (for reproducibility)
+    #     filtered_df.to_csv("data_train_tiles_filtered.csv", index=False)
+    #     df_val.to_csv("data_val_tiles.csv", index=False)
+    #     df_test.to_csv("data_test_tiles.csv", index=False)
         
-        Utils.copy_tiles_and_labels(filtered_df, '/workspace/Special_Problem/yolo_dataset_version_3/images/train')
-        Utils.copy_tiles_and_labels(df_val, '/workspace/Special_Problem/yolo_dataset_version_3/images/val')
-        Utils.copy_tiles_and_labels(df_test, '/workspace/Special_Problem/yolo_dataset_version_3/images/test')
+    #     Utils.copy_tiles_and_labels(filtered_df, '/workspace/Special_Problem/yolo_dataset_version_3/images/train')
+    #     Utils.copy_tiles_and_labels(df_val, '/workspace/Special_Problem/yolo_dataset_version_3/images/val')
+    #     Utils.copy_tiles_and_labels(df_test, '/workspace/Special_Problem/yolo_dataset_version_3/images/test')
         
+    # def saved_original_images_for_visualization(data, file):
+    #     image, bboxes, labels = data
+    #     fig, ax = plt.subplots(1, figsize=(20, 15))
+    #     ax.imshow(image)
+    #     Utils.visualize_bboxes(bboxes, labels, ax)
+    #     plt.savefig(f"/workspace/Special_Problem/data_with_annotations/{file}")   # Save to file instead of showing
+    #     plt.close()
+
     def saved_original_images_for_visualization(data, file):
         image, bboxes, labels = data
-        fig, ax = plt.subplots(1, figsize=(20, 15))
-        ax.imshow(image)
-        Utils.visualize_bboxes(bboxes, labels, ax)
-        plt.savefig(f"data_with_annotations/{file}")   # Save to file instead of showing
-        plt.close()
 
+        # Convert numpy (H,W,C) to a PIL RGB image
+        pil_img = Image.fromarray(image.astype('uint8')).convert("RGB")
+        draw = ImageDraw.Draw(pil_img)
+
+        for bbox, label in zip(bboxes, labels):
+            x_min, y_min, box_width, box_height = bbox
+
+            # Compute x_max, y_max for drawing
+            x_max = x_min + box_width
+            y_max = y_min + box_height
+
+            # Draw rectangle
+            draw.rectangle([x_min, y_min, x_max, y_max], outline="red", width=3)
+
+            # Draw text label
+            draw.text((x_min, y_min), str(label), fill="red")
+
+        # Save with original resolution & best quality
+        pil_img.save(
+            f"/workspace/Special_Problem/data_with_annotations/{file}",
+            quality=100
+        )
+    
 class CallbackUtil:
     def __init__(self):
         self.file = None
@@ -511,8 +541,8 @@ if __name__ == '__main__':
     #     plt.savefig(f"data_with_annotations/{file}")   # Save to file instead of showing
     #     plt.close()
         
-    # for dir in StaticVariable.DIR_PATH:
-    #     os.makedirs(dir, exist_ok=True)
+    for dir in StaticVariable.DIR_PATH:
+        os.makedirs(dir, exist_ok=True)
         
     callback = CallbackUtil()
     invalid = Utils.check_dataset()
@@ -520,19 +550,20 @@ if __name__ == '__main__':
     # for i in invalid:
     #     print(f"Invalid dataset found: {i}")
         
-    # Utils.data_split_csv(invalid)
+    Utils.data_split_csv(invalid)
     
     for data_type, data in Utils.preprocess_original_image_annotations_generator(
         invalid, 
         Utils.preprocess_augmented_image_annotations_helper,
         callback.set_file,
-        label="Both"
+        label="Thyrocyte"
     ):
         file = callback.get_file()
         prefix = "augmented" if data_type == "Augmented" else "original"
         
         # """Save Original Images for Visualization"""
-        # if prefix == 'original':
+        # """Save Augmented Images for Visualization"""
+        # if prefix == 'augmented':
         #     print(f"Saving visualization for {file}...")
         #     Utils.saved_original_images_for_visualization(data, file)
             
