@@ -2,8 +2,7 @@
 Data/
 Checked Data/
 data_with_annotations/
-models_BGR/
-models_RGB/
+thyro_models/
 
 # Ignore YOLO dataset splits
 yolo_dataset_version_1/images/train/
